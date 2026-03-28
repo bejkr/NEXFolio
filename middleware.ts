@@ -18,11 +18,9 @@ export const config = {
 
 export async function middleware(request: NextRequest) {
     try {
-        let supabaseResponse = NextResponse.next({
-            request: {
-                headers: request.headers,
-            },
-        })
+        // Create an empty response. DO NOT pass `request` or `headers` here, 
+        // as Vercel Edge interprets it as a route rewrite and returns 404s.
+        const supabaseResponse = NextResponse.next();
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -42,11 +40,6 @@ export async function middleware(request: NextRequest) {
                     setAll(cookiesToSet) {
                         try {
                             cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-                            supabaseResponse = NextResponse.next({
-                                request: {
-                                    headers: request.headers,
-                                },
-                            })
                             cookiesToSet.forEach(({ name, value, options }) =>
                                 supabaseResponse.cookies.set(name, value, options)
                             )
@@ -63,7 +56,9 @@ export async function middleware(request: NextRequest) {
         } = await supabase.auth.getUser()
 
         if (!user) {
-            return NextResponse.redirect(new URL('/login', request.url))
+            const redirectUrl = request.nextUrl.clone();
+            redirectUrl.pathname = '/login';
+            return NextResponse.redirect(redirectUrl);
         }
 
         return supabaseResponse
