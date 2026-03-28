@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id              String    @id @default(uuid())
+  externalId      String    @unique
+  name            String
+  expansion       String
+  category        String
+  releaseYear     Int?
+  imageUrl        String?
+  price           Float?
+  currency        String?
+  ebayUrl         String?
+  lastPriceSync   DateTime?
+  source          String    @default("cardmarket")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  userAssets      UserAsset[]
+  priceHistory    PriceHistory[]
+}
+
+model UserAsset {
+  id              String    @id @default(uuid())
+  userId          String
+  name            String
+  set             String
+  category        String
+  costBasis       Float
+  currentValue    Float
+  purchaseDate    DateTime
+  imageUrl        String?
+  productId       String?
+  product         Product?  @relation(fields: [productId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model PriceHistory {
+  id        String   @id @default(uuid())
+  productId String
+  price     Float
+  date      DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([productId])
+  @@index([date])
+}
