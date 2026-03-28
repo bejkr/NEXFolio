@@ -6,26 +6,14 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-    runtime: 'nodejs',
     matcher: [
-        '/dashboard', '/dashboard/:path*',
-        '/collection', '/collection/:path*',
-        '/market', '/market/:path*',
-        '/insights', '/insights/:path*',
-        '/products', '/products/:path*',
-        '/availability', '/availability/:path*',
-        '/alerts', '/alerts/:path*',
-        '/admin', '/admin/:path*',
-        '/profile', '/profile/:path*',
-        // Trailing slashes
-        '/dashboard/',
-        '/collection/',
-        '/market/',
-        '/insights/',
-        '/products/',
-        '/availability/',
-        '/alerts/',
-        '/admin/',
-        '/profile/',
+        /*
+         * Match all request paths except for the ones starting with:
+         * - _next/static (static files)
+         * - _next/image (image optimization files)
+         * - favicon.ico (favicon file)
+         * - public files (svg, png, etc.)
+         */
+        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 }
