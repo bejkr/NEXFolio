@@ -1,8 +1,10 @@
-import { type NextRequest } from 'next/server'
-import { updateSession } from './lib/supabase/middleware'
+import { type NextRequest, NextResponse } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-    return await updateSession(request)
+    // Pure bypass to test Vercel Edge Runtime stability
+    // If this fails, the issue is Vercel project config or Next.js version limits,
+    // not Supabase client code.
+    return NextResponse.next();
 }
 
 export const config = {
