@@ -33,10 +33,10 @@ export default function AdminLayout({
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">Admin Mode</span>
                         </div>
-                        <button className="text-gray-400 hover:text-white transition-colors relative">
+                        <Link href="/alerts" className="text-gray-400 hover:text-white transition-colors relative">
                             <Bell className="h-5 w-5" />
                             <span className="absolute top-0 right-1 h-2 w-2 bg-primary rounded-full border border-[#0E1116] shadow-[0_0_8px_rgba(0,229,153,0.8)]"></span>
-                        </button>
+                        </Link>
                         <Link href="/dashboard/profile">
                             <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-primary to-[#008055] border border-[rgba(0,229,153,0.3)] shadow-[0_0_10px_rgba(0,229,153,0.2)] cursor-pointer hover:scale-110 active:scale-95 transition-all"></div>
                         </Link>

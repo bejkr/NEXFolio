@@ -163,3 +163,42 @@ export interface ProductResearch {
 }
 
 export const mockProducts: ProductResearch[] = [];
+export interface Alert {
+    id: string;
+    type: 'price' | 'system' | 'availability';
+    severity: 'info' | 'warning' | 'critical';
+    title: string;
+    description: string;
+    timestamp: string;
+    read: boolean;
+}
+
+export const mockAlerts: Alert[] = [
+    {
+        id: '1',
+        type: 'price',
+        severity: 'info',
+        title: 'Price Drop: Charizard VMAX',
+        description: 'The price of Charizard VMAX has dropped by 5% in the last 24 hours.',
+        timestamp: new Date().toISOString(),
+        read: false,
+    },
+    {
+        id: '2',
+        type: 'system',
+        severity: 'warning',
+        title: 'Database Maintenance',
+        description: 'Scheduled maintenance will occur on Sunday at 2:00 AM UTC.',
+        timestamp: new Date(Date.now() - 86400000).toISOString(),
+        read: true,
+    },
+    {
+        id: '3',
+        type: 'availability',
+        severity: 'critical',
+        title: 'Stock Alert: Fusion Strike Booster Box',
+        description: 'Fusion Strike Booster Boxes are back in stock at Cardmarket.',
+        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+        read: false,
+    }
+];

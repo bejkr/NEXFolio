@@ -92,7 +92,7 @@ export function Sidebar() {
                     <div>
                         <h4 className="hidden lg:block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 px-2">Secondary</h4>
                         <div className="space-y-2 lg:space-y-1 mt-4 lg:mt-0">
-                            {renderLink('#alerts', <Bell className="h-5 w-5 shrink-0" />, 'Alerts')}
+                            {renderLink('/alerts', <Bell className="h-5 w-5 shrink-0" />, 'Alerts')}
                             {renderLink('#reports', <Lock className="h-5 w-5 shrink-0" />, 'Reports')}
                         </div>
                     </div>
