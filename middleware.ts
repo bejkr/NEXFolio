@@ -19,7 +19,9 @@ export const config = {
 export async function middleware(request: NextRequest) {
     try {
         let supabaseResponse = NextResponse.next({
-            request,
+            request: {
+                headers: request.headers,
+            },
         })
 
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -40,7 +42,11 @@ export async function middleware(request: NextRequest) {
                     setAll(cookiesToSet) {
                         try {
                             cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-                            supabaseResponse = NextResponse.next({ request })
+                            supabaseResponse = NextResponse.next({
+                                request: {
+                                    headers: request.headers,
+                                },
+                            })
                             cookiesToSet.forEach(({ name, value, options }) =>
                                 supabaseResponse.cookies.set(name, value, options)
                             )
