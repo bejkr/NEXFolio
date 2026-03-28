@@ -35,33 +35,16 @@ export async function updateSession(request: NextRequest) {
     )
 
     try {
-        // This will refresh session if expired - essential for Server Components
-        // to have a valid session.
         const {
             data: { user },
         } = await supabase.auth.getUser()
 
-        const pathname = request.nextUrl.pathname;
-        const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
-        const isApiRoute = pathname.startsWith('/api');
-        const isPublicAsset = pathname.includes('.') || pathname.startsWith('/_next');
-        const isHome = pathname === '/';
-
-        if (
-            !user &&
-            !isAuthRoute &&
-            !isApiRoute &&
-            !isPublicAsset &&
-            !isHome
-        ) {
-            // no user, potentially respond by redirecting the user to the login page
-            const url = request.nextUrl.clone()
-            url.pathname = '/login'
+        if (!user) {
+            const url = new URL('/login', request.url)
             return NextResponse.redirect(url)
         }
     } catch (error) {
-        // If anything fails, return the original response to avoid crashing the middleware
-        console.error('Middleware session refresh error:', error);
+        console.error('Middleware session error:', error);
     }
 
     return supabaseResponse

@@ -6,13 +6,16 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
+    runtime: 'nodejs',
     matcher: [
-        /*
-         * Vylúčte cesty začínajúce sa na:
-         * - _next/static (statické súbory)
-         * - _next/image (obrázky)
-         * - favicon.ico (ikonka)
-         */
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/dashboard/:path*',
+        '/collection/:path*',
+        '/market/:path*',
+        '/insights/:path*',
+        '/products/:path*',
+        '/availability/:path*',
+        '/alerts/:path*',
+        '/admin/:path*',
+        '/profile/:path*',
     ],
 }
