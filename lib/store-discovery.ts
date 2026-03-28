@@ -220,7 +220,7 @@ export class StoreDiscoveryService {
             // 3. TARGETED BOOSTER
             const missingMajors = majorStoreKeywords.filter(k =>
                 enabledStores.some(es => es.toLowerCase().includes(k)) &&
-                ![...mergedOffers.keys()].some(d => d.includes(k))
+                !Array.from(mergedOffers.keys()).some(d => d.includes(k))
             ).slice(0, 3);
 
             if (missingMajors.length > 0) {

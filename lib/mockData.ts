@@ -31,6 +31,11 @@ export interface PerformanceData {
     value: number;
 }
 
+export interface VolatilityData {
+    range: string;
+    value: number;
+}
+
 export interface TopMover {
     id: string;
     name: string;
