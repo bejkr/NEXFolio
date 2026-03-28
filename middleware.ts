@@ -1,21 +1,68 @@
-import { type NextRequest, NextResponse } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
-    // Pure bypass to test Vercel Edge Runtime stability
-    // If this fails, the issue is Vercel project config or Next.js version limits,
-    // not Supabase client code.
-    return NextResponse.next();
-}
-
+// Use explicit matchers to avoid Vercel Edge regex catastrophic backtracking
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - public files (svg, png, etc.)
-         */
-        '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+        '/dashboard/:path*',
+        '/collection/:path*',
+        '/market/:path*',
+        '/insights/:path*',
+        '/products/:path*',
+        '/availability/:path*',
+        '/alerts/:path*',
+        '/admin/:path*',
+        '/profile/:path*',
     ],
+}
+
+export async function middleware(request: NextRequest) {
+    try {
+        let supabaseResponse = NextResponse.next({
+            request,
+        })
+
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseAnonKey) {
+            return supabaseResponse;
+        }
+
+        const supabase = createServerClient(
+            supabaseUrl,
+            supabaseAnonKey,
+            {
+                cookies: {
+                    getAll() {
+                        return request.cookies.getAll()
+                    },
+                    setAll(cookiesToSet) {
+                        try {
+                            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+                            supabaseResponse = NextResponse.next({ request })
+                            cookiesToSet.forEach(({ name, value, options }) =>
+                                supabaseResponse.cookies.set(name, value, options)
+                            )
+                        } catch (cookieError) {
+                            console.error('Middleware cookie error:', cookieError)
+                        }
+                    },
+                },
+            }
+        )
+
+        const {
+            data: { user },
+        } = await supabase.auth.getUser()
+
+        if (!user) {
+            return NextResponse.redirect(new URL('/login', request.url))
+        }
+
+        return supabaseResponse
+    } catch (e) {
+        console.error('CRITICAL MIDDLEWARE EXCEPTION:', e);
+        return NextResponse.next();
+    }
 }
