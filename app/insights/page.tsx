@@ -9,6 +9,8 @@ export const metadata = {
     description: 'Deep dive into your portfolio and market trends',
 };
 
+export const dynamic = 'force-dynamic';
+
 // Mock data to ensure the page looks good immediately
 const summaryData: PortfolioSummary = {
     totalValue: 12450.50,

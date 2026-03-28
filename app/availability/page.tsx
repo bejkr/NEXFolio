@@ -6,6 +6,8 @@ export const metadata = {
     description: 'Track market inventory and availability alerts',
 };
 
+export const dynamic = 'force-dynamic';
+
 export default function AvailabilityPage() {
     return (
         <div className="p-6 lg:p-8 max-w-[1600px] mx-auto space-y-8 animate-in fade-in duration-500">

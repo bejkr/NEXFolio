@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SUPPORTED_STORES } from '@/lib/store-discovery';
@@ -100,8 +102,8 @@ export default function AdminSettingsPage() {
                                 key={store.id}
                                 onClick={() => toggleStore(store.id)}
                                 className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${activeStoreIds.includes(store.id)
-                                        ? 'bg-primary/5 border-primary/30'
-                                        : 'bg-white/5 border-white/10 grayscale opacity-60 hover:grayscale-0 hover:opacity-100'
+                                    ? 'bg-primary/5 border-primary/30'
+                                    : 'bg-white/5 border-white/10 grayscale opacity-60 hover:grayscale-0 hover:opacity-100'
                                     }`}
                             >
                                 <div className="flex items-center gap-4">

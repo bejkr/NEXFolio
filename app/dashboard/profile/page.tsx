@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,8 +94,8 @@ export default function ProfilePage() {
                                 <label className="text-xs font-medium text-gray-500 uppercase tracking-wider">Account Role</label>
                                 <div className="mt-1">
                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${profile.role === 'admin'
-                                            ? 'bg-primary/10 text-primary border border-primary/20'
-                                            : 'bg-white/10 text-white border border-white/10'
+                                        ? 'bg-primary/10 text-primary border border-primary/20'
+                                        : 'bg-white/10 text-white border border-white/10'
                                         }`}>
                                         {profile.role || 'User'}
                                     </span>

@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { MarketOverview } from "@/components/market/MarketOverview";
 import { PerformanceHeatmap } from "@/components/market/PerformanceHeatmap";
 import { MarketMovers } from "@/components/market/MarketMovers";
