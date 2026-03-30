@@ -25,37 +25,37 @@ export async function updateSession(request: NextRequest) {
                         return request.cookies.getAll()
                     },
                     setAll(cookiesToSet) {
-                        try {
-                            cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-                            supabaseResponse = NextResponse.next({
-                                request: {
-                                    headers: request.headers,
-                                },
-                            })
-                            cookiesToSet.forEach(({ name, value, options }) =>
-                                supabaseResponse.cookies.set(name, value, options)
-                            )
-                        } catch (cookieError) {
-                            console.error('Edge Middleware Cookie Error:', cookieError)
-                        }
+                        cookiesToSet.forEach(({ name, value, options }) =>
+                            request.cookies.set(name, value)
+                        )
+                        supabaseResponse = NextResponse.next({
+                            request: {
+                                headers: request.headers,
+                            },
+                        })
+                        cookiesToSet.forEach(({ name, value, options }) =>
+                            supabaseResponse.cookies.set(name, value, options)
+                        )
                     },
                 },
             }
         )
 
+        // This will refresh session if expired - required for Server Components
+        // https://supabase.com/docs/guides/auth/auth-helpers/nextjs#managing-session-with-middleware
         const {
             data: { user },
         } = await supabase.auth.getUser()
 
         const pathname = request.nextUrl.pathname;
 
-        // Strict bypass for public assets, auth pages, tracking, api, etc.
+        // Strict bypass for public assets already handled in root middleware,
+        // but adding a safety check here for explicit auth redirection.
         const isAuthRoute = pathname.startsWith('/login') || pathname.startsWith('/register');
         const isHome = pathname === '/';
         const isApi = pathname.startsWith('/api');
-        const isPublicFile = pathname.includes('.');
 
-        if (!user && !isAuthRoute && !isHome && !isApi && !isPublicFile) {
+        if (!user && !isAuthRoute && !isHome && !isApi) {
             const url = request.nextUrl.clone()
             url.pathname = '/login'
             return NextResponse.redirect(url)
@@ -63,8 +63,6 @@ export async function updateSession(request: NextRequest) {
 
         return supabaseResponse
     } catch (e) {
-        // CRITICAL FAILSAFE: If absolutely anything throws (network, edge runtime incompat, missing globals),
-        // we log it and return a transparent response to prevent Vercel 500 INTERNAL_SERVER_ERROR.
         console.error('CRITICAL EDGE MIDDLEWARE EXCEPTION:', e);
         return NextResponse.next({
             request: {
@@ -73,3 +71,4 @@ export async function updateSession(request: NextRequest) {
         })
     }
 }
+
