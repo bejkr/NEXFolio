@@ -99,4 +99,12 @@ export class EbayClient {
         );
         return response.data;
     }
+
+    async getItemPrice(itemId: string): Promise<{ value: number, currency: string }> {
+        const item = await this.getItem(itemId);
+        return {
+            value: parseFloat(item.price.value),
+            currency: item.price.currency
+        };
+    }
 }

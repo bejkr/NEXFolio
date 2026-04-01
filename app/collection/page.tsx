@@ -24,7 +24,11 @@ export default function CollectionPage() {
                 const response = await fetch('/api/collection');
                 if (response.ok) {
                     const data = await response.json();
-                    setItems(data);
+                    const mappedItems = data.map((item: any) => ({
+                        ...item,
+                        currentValue: item.product?.price ?? item.currentValue
+                    }));
+                    setItems(mappedItems);
                 }
             } catch (error) {
                 console.error('Error fetching collection:', error);
@@ -58,6 +62,24 @@ export default function CollectionPage() {
 
     const handleAddItem = (newItem: CollectionItem) => {
         setItems(prev => [newItem, ...prev]);
+    };
+
+    const handleDeleteItem = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this item?')) return;
+
+        try {
+            const response = await fetch(`/api/collection/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                setItems(prev => prev.filter(item => item.id !== id));
+            } else {
+                console.error('Failed to delete item');
+            }
+        } catch (error) {
+            console.error('Error deleting item:', error);
+        }
     };
 
     return (
@@ -118,9 +140,9 @@ export default function CollectionPage() {
                     <p>Loading your collection...</p>
                 </div>
             ) : viewMode === 'list' ? (
-                <CollectionTable data={filteredData} />
+                <CollectionTable data={filteredData} onDelete={handleDeleteItem} />
             ) : (
-                <CollectionGrid data={filteredData} />
+                <CollectionGrid data={filteredData} onDelete={handleDeleteItem} />
             )}
 
             <AddItemModal

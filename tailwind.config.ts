@@ -29,6 +29,10 @@ const config: Config = {
                     text: "#FF4D4D",
                 }
             },
+            fontFamily: {
+                sans: ["var(--font-geist-sans)"],
+                mono: ["var(--font-geist-mono)"],
+            },
         },
     },
     plugins: [],

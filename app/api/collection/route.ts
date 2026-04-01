@@ -15,6 +15,7 @@ export async function GET() {
     try {
         const assets = await prisma.userAsset.findMany({
             where: { userId: user.id },
+            include: { product: true },
             orderBy: { createdAt: 'desc' }
         });
         return NextResponse.json(assets);

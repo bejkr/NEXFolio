@@ -11,6 +11,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     const router = useRouter();
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [syncing, setSyncing] = useState(false);
 
     // Clean dynamic DB ids
     const dbId = params.id.startsWith('db_') ? params.id.replace('db_', '') : params.id;
@@ -41,6 +42,23 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         };
         fetchProduct();
     }, [dbId]);
+
+    const handleSync = async () => {
+        setSyncing(true);
+        try {
+            const res = await fetch(`/api/products/${dbId}/sync`, { method: 'POST' });
+            if (res.ok) {
+                // Refresh product data
+                const prodRes = await fetch(`/api/products/${dbId}`);
+                const data = await prodRes.json();
+                setProduct(data);
+            }
+        } catch (error) {
+            console.error("Sync failed:", error);
+        } finally {
+            setSyncing(false);
+        }
+    };
 
     const getMockChange = (id: string, is30D: boolean) => {
         const val = ((parseInt(id.replace(/[^0-9]/g, '') || '5')) % 20) - 10;
@@ -114,8 +132,26 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                         </span>
                         {product.currency && <span className="text-sm text-gray-500 uppercase">{product.currency}</span>}
                     </div>
-                    {product.ebayUrl && (
-                        <div className="mt-4">
+
+                    <div className="mt-2 flex items-center gap-2">
+                        {product.lastPriceSync ? (
+                            <span className="inline-flex items-center text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                <Activity className="w-3 h-3 mr-1" /> LIVE
+                            </span>
+                        ) : (
+                            <span className="inline-flex items-center text-[10px] font-medium text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                                ESTIMATED
+                            </span>
+                        )}
+                        {product.lastPriceSync && (
+                            <span className="text-[10px] text-gray-500">
+                                Updated {new Date(product.lastPriceSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        {product.ebayUrl && (
                             <a
                                 href={product.ebayUrl}
                                 target="_blank"
@@ -124,8 +160,16 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                             >
                                 View on eBay →
                             </a>
-                        </div>
-                    )}
+                        )}
+                        <button
+                            onClick={handleSync}
+                            disabled={syncing}
+                            className="inline-flex items-center px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+                        >
+                            {syncing ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <TrendingUp className="w-3 h-3 mr-2" />}
+                            Sync Now
+                        </button>
+                    </div>
                     <div className="mt-2 flex items-center gap-4">
                         <span className={`flex items-center text-sm font-semibold ${change30D >= 0 ? 'text-[#00E599]' : 'text-[#FF4D4D]'}`}>
                             {change30D >= 0 ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}

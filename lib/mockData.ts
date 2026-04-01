@@ -87,6 +87,7 @@ export interface CollectionItem {
     purchaseDate: string;
     imageUrl: string;
     productId?: string | null;
+    product?: any | null;
 }
 
 export const mockCollectionData: CollectionItem[] = [];

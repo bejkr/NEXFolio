@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import {
     LayoutDashboard, PieChart, TrendingUp, Lightbulb,
     ShoppingCart, Bell, Lock, Settings,
-    Search, LogOut, ShieldCheck
+    Search, LogOut, ShieldCheck, Globe
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -56,8 +56,10 @@ export function Sidebar() {
     return (
         <aside className="w-16 lg:w-64 border-r border-[rgba(255,255,255,0.06)] flex flex-col justify-between bg-[#0E1116] h-full overflow-y-auto custom-scrollbar">
             <div>
-                <div className="h-16 flex items-center justify-center lg:justify-start lg:px-6 border-b border-[rgba(255,255,255,0.06)] shrink-0 sticky top-0 bg-[#0E1116] z-10">
-                    <img src="/Logo.png" alt="Nexfolio Logo" className="h-10 lg:h-12 w-auto max-w-[140px] object-contain shrink-0" />
+                <div className="h-16 flex items-center justify-center lg:justify-start lg:px-6 border-b border-[rgba(255,255,255,0.06)] shrink-0 sticky top-0 bg-[#0E1116] z-10 transition-transform duration-300">
+                    <Link href="/" className="flex items-center hover:opacity-80 transition-opacity">
+                        <img src="/Logo.png" alt="Nexfolio Logo" className="h-10 lg:h-12 w-auto max-w-[140px] object-contain shrink-0" />
+                    </Link>
                 </div>
 
                 <nav className="p-4 space-y-6">
@@ -100,6 +102,7 @@ export function Sidebar() {
             </div>
 
             <div className="p-4 border-t border-[rgba(255,255,255,0.06)] shrink-0 sticky bottom-0 bg-[#0E1116] space-y-2 lg:space-y-1">
+                {renderLink('/', <Globe className="h-5 w-5 shrink-0" />, 'Back to Website')}
                 {role === 'admin' && renderLink('/admin/settings', <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-500" />, 'Admin Settings')}
                 {renderLink('#settings', <Settings className="h-5 w-5 shrink-0" />, 'Settings')}
                 <button

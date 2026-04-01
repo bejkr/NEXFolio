@@ -3,12 +3,15 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent } from '@/components/ui/card';
 import { CollectionItem } from '@/lib/mockData';
+import Link from 'next/link';
+import { Trash2 } from 'lucide-react';
 
 interface CollectionTableProps {
     data: CollectionItem[];
+    onDelete?: (id: string) => void;
 }
 
-export function CollectionTable({ data }: CollectionTableProps) {
+export function CollectionTable({ data, onDelete }: CollectionTableProps) {
     const formatCurrency = (val: number) =>
         new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(val);
 
@@ -40,7 +43,8 @@ export function CollectionTable({ data }: CollectionTableProps) {
                                 <TableHead className="text-gray-400 font-medium">Condition</TableHead>
                                 <TableHead className="text-right text-gray-400 font-medium">Cost Basis</TableHead>
                                 <TableHead className="text-right text-gray-400 font-medium">Market Value</TableHead>
-                                <TableHead className="text-right text-gray-400 font-medium pr-6">Total Return</TableHead>
+                                <TableHead className="text-right text-gray-400 font-medium">Total Return</TableHead>
+                                <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -52,17 +56,29 @@ export function CollectionTable({ data }: CollectionTableProps) {
                                 return (
                                     <TableRow key={item.id} className="border-b border-[rgba(255,255,255,0.02)] hover:bg-white/[0.02] transition-colors group">
                                         <TableCell className="py-4 pl-6 group-hover:text-white transition-colors">
-                                            <div className="flex items-center space-x-4">
-                                                <div className="w-10 h-14 rounded overflow-hidden bg-black/40 border border-white/5 flex-shrink-0 flex items-center justify-center">
-                                                    {/* Using a standard img tag for simplicity with external mock URLs */}
-                                                    <img
-                                                        src={`/api/proxy-image?url=${encodeURIComponent(item.imageUrl)}`}
-                                                        alt={item.name}
-                                                        className="w-full h-full object-cover"
-                                                    />
+                                            {item.productId ? (
+                                                <Link href={`/products/${item.productId}`} className="flex items-center space-x-4 hover:opacity-80 transition-opacity">
+                                                    <div className="w-10 h-14 rounded overflow-hidden bg-black/40 border border-white/5 flex-shrink-0 flex items-center justify-center">
+                                                        <img
+                                                            src={`/api/proxy-image?url=${encodeURIComponent(item.imageUrl)}`}
+                                                            alt={item.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                    <span className="font-semibold text-gray-200">{item.name}</span>
+                                                </Link>
+                                            ) : (
+                                                <div className="flex items-center space-x-4">
+                                                    <div className="w-10 h-14 rounded overflow-hidden bg-black/40 border border-white/5 flex-shrink-0 flex items-center justify-center">
+                                                        <img
+                                                            src={`/api/proxy-image?url=${encodeURIComponent(item.imageUrl)}`}
+                                                            alt={item.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                    <span className="font-semibold text-gray-200">{item.name}</span>
                                                 </div>
-                                                <span className="font-semibold text-gray-200">{item.name}</span>
-                                            </div>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-gray-400">{item.set}</TableCell>
                                         <TableCell>
@@ -76,13 +92,22 @@ export function CollectionTable({ data }: CollectionTableProps) {
                                         <TableCell className="text-right text-white font-bold tracking-tight">
                                             {formatCurrency(item.currentValue)}
                                         </TableCell>
-                                        <TableCell className={`text-right font-medium pr-6 ${returnColor}`}>
+                                        <TableCell className={`text-right font-medium ${returnColor}`}>
                                             <div className="flex flex-col items-end">
                                                 <span>{isPositive ? '+' : ''}{perc.toFixed(2)}%</span>
                                                 <span className="text-xs opacity-70 font-normal">
                                                     {isPositive ? '+' : ''}{formatCurrency(diff)}
                                                 </span>
                                             </div>
+                                        </TableCell>
+                                        <TableCell className="text-right pr-6">
+                                            <button
+                                                onClick={() => onDelete?.(item.id)}
+                                                className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-all opacity-0 group-hover:opacity-100"
+                                                title="Delete item"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </TableCell>
                                     </TableRow>
                                 );

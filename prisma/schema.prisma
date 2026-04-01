@@ -18,6 +18,7 @@ model Product {
   price           Float?
   currency        String?
   ebayUrl         String?
+  ebayItemId      String?   @unique
   lastPriceSync   DateTime?
   source          String    @default("cardmarket")
   createdAt       DateTime  @default(now())

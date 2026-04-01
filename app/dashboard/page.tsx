@@ -17,6 +17,8 @@ import {
     mockMarketSnapshot
 } from '@/lib/mockData';
 
+import { DashboardHeader } from '@/components/DashboardHeader';
+
 export const metadata: Metadata = {
     title: 'Dashboard | Nexfolio',
     description: 'Portfolio analytics dashboard for Nexfolio.',
@@ -44,7 +46,10 @@ export default async function DashboardPage() {
     });
 
     // 1. Calculate Summary
-    const totalValue = assets.reduce((sum: number, asset: any) => sum + asset.currentValue, 0);
+    const totalValue = assets.reduce((sum: number, asset: any) => {
+        const price = asset.product?.price ?? asset.currentValue;
+        return sum + price;
+    }, 0);
     const totalCost = assets.reduce((sum: number, asset: any) => sum + asset.costBasis, 0);
     const unrealizedGainLoss = totalValue - totalCost;
     const gainPercentage = totalCost > 0 ? (unrealizedGainLoss / totalCost) * 100 : 0;
@@ -62,7 +67,8 @@ export default async function DashboardPage() {
     // 2. Portfolio Allocation
     const allocationMap = assets.reduce((acc: Record<string, number>, asset: any) => {
         const cat = asset.category || 'Unknown';
-        acc[cat] = (acc[cat] || 0) + asset.currentValue;
+        const price = asset.product?.price ?? asset.currentValue;
+        acc[cat] = (acc[cat] || 0) + price;
         return acc;
     }, {} as Record<string, number>);
 
@@ -76,17 +82,14 @@ export default async function DashboardPage() {
         id: asset.id,
         name: asset.name,
         category: asset.category as any,
-        currentValue: asset.currentValue,
+        currentValue: asset.product?.price ?? asset.currentValue,
         change30D: 0,
         change12M: 0,
         liquidityScore: 85 // Mock for now
     }));
 
     // 4. Performance Data (Placeholder until PriceHistory is populated)
-    const performanceData: PerformanceData[] = [
-        { month: 'Start', value: totalCost },
-        { month: 'Current', value: totalValue }
-    ];
+    const performanceData: PerformanceData[] = [];
 
     // 5. Risk Metrics
     const riskMetrics: RiskMetrics = {
@@ -100,16 +103,7 @@ export default async function DashboardPage() {
 
     return (
         <div className="p-6 md:p-8 max-w-7xl mx-auto w-full">
-            <div className="flex items-center justify-between mb-8">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-white">Collection Overview</h1>
-                </div>
-                <div className="flex items-center space-x-3">
-                    <button className="bg-[#151A21] text-gray-300 border border-[rgba(255,255,255,0.06)] hover:bg-white/[0.02] hover:text-white transition-colors rounded-md px-4 py-2 text-sm font-medium">
-                        Export
-                    </button>
-                </div>
-            </div>
+            <DashboardHeader lastSync={assets[0]?.product?.lastPriceSync || undefined} />
 
             <div className="grid grid-cols-12 gap-y-8 gap-x-6">
 
