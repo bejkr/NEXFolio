@@ -1,0 +1,41 @@
+name: Daily Synchronization
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # Runs every day at 03:00 UTC
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run Price Sync
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          EBAY_CLIENT_ID: ${{ secrets.EBAY_CLIENT_ID }}
+          EBAY_CLIENT_SECRET: ${{ secrets.EBAY_CLIENT_SECRET }}
+          EBAY_SANDBOX: ${{ secrets.EBAY_SANDBOX }}
+        run: npm run sync:prices
+
+      - name: Run Product Sync (Cardmarket)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+          ENABLE_SCRAPER_CACHE: "true"
+        run: npm run sync:products
