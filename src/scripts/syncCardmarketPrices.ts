@@ -37,9 +37,7 @@ async function main() {
     logger.info('Starting Cardmarket Pricing Sync...');
 
     try {
-        const products = await prisma.product.findMany({
-            where: { source: 'cardmarket' },
-        });
+        const products = await prisma.product.findMany();
 
         if (products.length === 0) {
             logger.warn('No Cardmarket products found in the database. Sync finished.');
@@ -73,6 +71,15 @@ async function main() {
                         price: bestPrice
                     }
                 });
+
+                // Update User Portfolios (UserAssets) with new market price
+                await prisma.userAsset.updateMany({
+                    where: { productId: product.id },
+                    data: {
+                        currentValue: bestPrice
+                    }
+                });
+
                 logger.info(`Updated ${product.name} to price ${bestPrice} €`);
             } else {
                 logger.warn(`Could not find a valid price for ${product.name}. Check Cardmarket URL category guess.`);
