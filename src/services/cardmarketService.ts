@@ -40,7 +40,7 @@ export const cardmarketService = {
         if (!globalBrowser) {
             logger.debug('Launching Puppeteer Stealth Browser...');
             globalBrowser = await puppeteer.launch({
-                headless: false, // Visible for debugging if needed, usually true for prod
+                headless: process.env.PUPPETEER_HEADLESS !== 'false', // Default to true for CI/Prod
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
