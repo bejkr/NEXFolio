@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "sync:prices": "ts-node --project src/scripts/tsconfig.json src/scripts/syncEbayPrices.ts",
-    "sync:products": "ts-node --project src/scripts/tsconfig.json src/scripts/syncSealedProducts.ts"
+    "sync:products": "ts-node --project src/scripts/tsconfig.json src/scripts/syncSealedProducts.ts",
+    "sync:cardmarket:prices": "ts-node --project src/scripts/tsconfig.json src/scripts/syncCardmarketPrices.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

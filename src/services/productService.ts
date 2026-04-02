@@ -11,6 +11,7 @@ export interface ProductData {
     releaseYear?: number;
     imageUrl?: string;
     source?: string;
+    price?: number;
 }
 
 export const productService = {
@@ -24,6 +25,7 @@ export const productService = {
                     category: data.category,
                     releaseYear: data.releaseYear,
                     imageUrl: data.imageUrl,
+                    price: data.price,
                     updatedAt: new Date(),
                 },
                 create: {

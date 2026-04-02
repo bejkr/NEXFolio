@@ -264,5 +264,45 @@ export const cardmarketService = {
             logger.warn(`Could not fetch category page at ${pageUrl}`);
             return { products: [], hasNextPage: false };
         }
+    },
+
+    async fetchProductDetails(productUrl: string): Promise<{ trendPrice?: number, fromPrice?: number, thirtyDayAvg?: number }> {
+        // Enforce English language filter
+        const urlToFetch = productUrl.includes('?') 
+            ? `${productUrl}&language=1` 
+            : `${productUrl}?language=1`;
+            
+        try {
+            const html = await this.fetchHtml(urlToFetch, false); // Do not cache prices permanently
+            const $ = cheerio.load(html);
+            
+            let trendPrice: number | undefined;
+            let fromPrice: number | undefined;
+            let thirtyDayAvg: number | undefined;
+
+            const parsePriceString = (str: string) => {
+                // Remove currency symbol and decode special spaces, then replace comma with dot
+                const clean = str.replace(/[€$£]/g, '').trim().replace(/\s/g, '').replace(',', '.');
+                const parsed = parseFloat(clean);
+                return isNaN(parsed) ? undefined : parsed;
+            };
+
+            $('.info-list-container dl').each((_, dl) => {
+                $(dl).find('dt').each((i, dt) => {
+                    const label = $(dt).text().trim();
+                    const dd = $(dt).next('dd');
+                    const value = $(dd).text().trim();
+                    
+                    if (label.includes('Trend Price')) trendPrice = parsePriceString(value);
+                    if (label.includes('From')) fromPrice = parsePriceString(value);
+                    if (label.includes('30-days average price')) thirtyDayAvg = parsePriceString(value);
+                });
+            });
+
+            return { trendPrice, fromPrice, thirtyDayAvg };
+        } catch (error) {
+            logger.warn(`Could not fetch product details for ${urlToFetch}`);
+            return {};
+        }
     }
 };

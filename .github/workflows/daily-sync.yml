@@ -2,7 +2,7 @@ name: Daily Synchronization
 
 on:
   schedule:
-    - cron: '0 3 * * *' # Runs every day at 03:00 UTC
+    - cron: '0 2 * * *' # Runs every day at 02:00 UTC (04:00 CET/CEST)
   workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
 
 jobs:
@@ -25,17 +25,14 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
-      - name: Run Price Sync
+      - name: Run Cardmarket Product Update
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          EBAY_CLIENT_ID: ${{ secrets.EBAY_CLIENT_ID }}
-          EBAY_CLIENT_SECRET: ${{ secrets.EBAY_CLIENT_SECRET }}
-          EBAY_SANDBOX: ${{ secrets.EBAY_SANDBOX }}
-        run: npm run sync:prices
-
-      - name: Run Product Sync (Cardmarket)
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
           ENABLE_SCRAPER_CACHE: "true"
         run: npm run sync:products
+
+      - name: Run Cardmarket Pricing Sync
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ENABLE_SCRAPER_CACHE: "true"
+        run: npm run sync:cardmarket:prices
