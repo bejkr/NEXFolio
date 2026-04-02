@@ -32,15 +32,16 @@ export interface CategoryPageResult {
     hasNextPage: boolean;
 }
 
-// Global browser instance to reuse across requests
+// Global browser and page instances to reuse across requests
 let globalBrowser: Browser | null = null;
+let globalPage: any | null = null;
 
 export const cardmarketService = {
     async getBrowser(): Promise<Browser> {
         if (!globalBrowser) {
             logger.debug('Launching Puppeteer Stealth Browser...');
             globalBrowser = await puppeteer.launch({
-                headless: process.env.PUPPETEER_HEADLESS !== 'false', // Default to true for CI/Prod
+                headless: process.env.PUPPETEER_HEADLESS !== 'false', 
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -52,10 +53,21 @@ export const cardmarketService = {
         return globalBrowser;
     },
 
+    async getPage(): Promise<any> {
+        const browser = await this.getBrowser();
+        if (!globalPage || globalPage.isClosed()) {
+            globalPage = await browser.newPage();
+            await globalPage.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
+            await globalPage.setViewport({ width: 1920, height: 1080 });
+        }
+        return globalPage;
+    },
+
     async closeBrowser() {
         if (globalBrowser) {
             await globalBrowser.close();
             globalBrowser = null;
+            globalPage = null;
             logger.debug('Puppeteer Browser closed.');
         }
     },
@@ -66,61 +78,55 @@ export const cardmarketService = {
 
         if (useCache && process.env.ENABLE_SCRAPER_CACHE === 'true' && fs.existsSync(cacheFile)) {
             const cachedContent = fs.readFileSync(cacheFile, 'utf-8');
-            // Check if what we cached was a Cloudflare "Just a moment" page
             if (!cachedContent.includes('Just a moment...')) {
-                logger.debug(`Using valid cached HTML for ${url}`);
                 return cachedContent;
             } else {
-                logger.debug(`Cached HTML for ${url} was a Cloudflare challenge. Refetching...`);
-                fs.unlinkSync(cacheFile); // Delete broken cache
+                fs.unlinkSync(cacheFile);
             }
         }
 
         try {
             logger.info(`Fetching HTML via Puppeteer from ${url}`);
-            const browser = await this.getBrowser();
-            const page = await browser.newPage();
-
-            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
-            await page.setViewport({ width: 1920, height: 1080 });
+            const page = await this.getPage();
 
             logger.debug(`Navigating...`);
-            // We do not await domcontentloaded immediately if CF intercepts, we just wait for network idle
-            await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });
+            await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
 
-            const pageTitle = await page.title();
-            if (pageTitle.includes('Just a moment') || pageTitle.includes('Cloudflare')) {
-                logger.warn(`Cloudflare Challenge detected on ${url}. Waiting for auto-pass...`);
+            // Check if we are stuck on a challenge page
+            let html = await page.content();
+            let pageTitle = await page.title();
+
+            if (html.includes('Just a moment...') || pageTitle.includes('Just a moment')) {
+                logger.warn(`Cloudflare Challenge detected on ${url}. Waiting up to 30s for auto-pass...`);
                 try {
-                    // Cardmarket usually renders .table-body when products load, or h1 for expansions
-                    await page.waitForSelector('h1', { timeout: 30000 });
+                    // Look for content markers that indicate a real Cardmarket page
+                    await page.waitForFunction(() => {
+                        const text = document.body.innerText;
+                        return !text.includes('Just a moment...') && !document.title.includes('Just a moment');
+                    }, { timeout: 30000 });
+                    
                     logger.info(`Successfully passed Cloudflare challenge for ${url}`);
+                    // Extra wait to be safe after bypass
+                    await new Promise(r => setTimeout(r, 2000));
                 } catch (e) {
-                    logger.warn(`Timeout waiting for CF bypass on ${url}`);
+                    logger.warn(`Timeout or error during CF bypass on ${url}`);
                 }
             }
 
-            // Scroll down slightly to trigger lazy loaded images
-            await page.evaluate(() => {
-                window.scrollBy(0, window.innerHeight);
-            });
-            await new Promise(r => setTimeout(r, 2000)); // Wait for lazy load
-
-            const html = await page.content();
+            // Scroll down for lazy loaded images
+            await page.evaluate(() => window.scrollBy(0, 500));
+            
+            html = await page.content();
 
             if (html.includes('Just a moment...')) {
-                await page.close();
-                throw new Error("Unable to bypass Cloudflare Block - HTML still shows challenge");
+                throw new Error("Unable to bypass Cloudflare Block - HTML still shows challenge after waiting");
             }
 
             if (process.env.ENABLE_SCRAPER_CACHE === 'true') {
-                if (!fs.existsSync(CACHE_DIR)) {
-                    fs.mkdirSync(CACHE_DIR, { recursive: true });
-                }
+                if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
                 fs.writeFileSync(cacheFile, html);
             }
 
-            await page.close();
             return html;
         } catch (error: any) {
             logger.error(`Error fetching ${url} via Puppeteer: ${error.message}`);
