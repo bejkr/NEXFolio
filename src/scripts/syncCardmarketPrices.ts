@@ -10,7 +10,7 @@ const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 async function fetchWithRetry(operation: () => Promise<any>, retries = 3): Promise<any> {
     try {
-        await delay(3000); // 3 seconds between requests to avoid bans
+        await delay(10000); // 10 seconds between requests to avoid bans
         return await operation();
     } catch (error: any) {
         if (retries > 0) {
