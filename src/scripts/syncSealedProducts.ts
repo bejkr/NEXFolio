@@ -79,14 +79,15 @@ async function main() {
 
         logger.info(`Found ${expansions.length} expansions. Starting sync...`);
 
-        // 2. Iterate and sync each
-        // Using a sequential loop to easily manage the 1s delay between sets as requested,
-        // while the individual network requests inside are governed by p-limit(2).
-        for (const expansion of expansions) {
+        // 2. Iterate and sync each (Only the last 20 to avoid being banned/limit requests)
+        const recentExpansions = expansions.slice(-20);
+        logger.info(`Syncing only the 20 most recent expansions to avoid Cloudflare blocks...`);
+
+        for (const expansion of recentExpansions) {
             await syncExpansion(expansion);
 
-            // Polite delay between expansions
-            await delay(1000);
+            // Polite delay between expansions - increased to 10s for stability in CI
+            await delay(10000);
         }
 
         logger.info('Sync completed successfully!');
