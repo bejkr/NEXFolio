@@ -81,7 +81,8 @@ export const cardmarketService = {
     },
 
     async fetchHtml(url: string, useCache: boolean = true): Promise<string> {
-        const cacheKey = Buffer.from(url).toString('base64');
+        // Use a safe version of base64 for filenames (replace / and +)
+        const cacheKey = Buffer.from(url).toString('base64').replace(/\//g, '-').replace(/\+/g, '_');
         const cacheFile = path.join(CACHE_DIR, `${cacheKey}.html`);
 
         if (useCache && process.env.ENABLE_SCRAPER_CACHE === 'true' && fs.existsSync(cacheFile)) {
