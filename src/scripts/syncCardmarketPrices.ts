@@ -47,12 +47,21 @@ async function main() {
         logger.info(`Found ${products.length} products to sync.`);
 
         for (const product of products) {
+            // Skip products that were recently updated (e.g. in the last 12 hours)
+            const twelveHoursAgo = new Date(Date.now() - 12 * 60 * 60 * 1000);
+            if (product.lastPriceSync && product.lastPriceSync > twelveHoursAgo) {
+                logger.info(`Skipping ${product.name}, already synced today.`);
+                continue;
+            }
+
             const cmCategory = guessCategory(product.externalId);
             const productUrl = `https://www.cardmarket.com/en/Pokemon/Products/${cmCategory}/${product.externalId}`;
             
             logger.info(`Syncing: ${product.name} at ${productUrl}`);
             
-            const details = await limit(() => fetchWithRetry(() => cardmarketService.fetchProductDetails(productUrl)));
+            // Random jitter between 5-15 seconds
+            const jitter = 5000 + Math.random() * 10000;
+            const details = await limit(() => fetchWithRetry(() => cardmarketService.fetchProductDetails(productUrl), 3));
             
             const bestPrice = details.trendPrice || details.thirtyDayAvg || details.fromPrice;
 
