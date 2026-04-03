@@ -98,21 +98,24 @@ export const cardmarketService = {
             logger.info(`Fetching HTML via Puppeteer from ${url}`);
             const page = await this.getPage();
 
+            logger.debug(`Adding random human-like delay before navigation...`);
+            await new Promise(r => setTimeout(r, 2000 + Math.random() * 5000));
+
             logger.debug(`Navigating...`);
-            await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+            await page.goto(url, { waitUntil: 'networkidle2', timeout: 90000 });
 
             // Check if we are stuck on a challenge page
             let html = await page.content();
             let pageTitle = await page.title();
 
             if (html.includes('Just a moment...') || pageTitle.includes('Just a moment')) {
-                logger.warn(`Cloudflare Challenge detected on ${url}. Waiting up to 30s for auto-pass...`);
+                logger.warn(`Cloudflare Challenge detected on ${url}. Waiting up to 60s for auto-pass...`);
                 try {
                     // Look for content markers that indicate a real Cardmarket page
                     await page.waitForFunction(() => {
                         const text = document.body.innerText;
                         return !text.includes('Just a moment...') && !document.title.includes('Just a moment');
-                    }, { timeout: 30000 });
+                    }, { timeout: 60000 });
                     
                     logger.info(`Successfully passed Cloudflare challenge for ${url}`);
                     // Extra wait to be safe after bypass
