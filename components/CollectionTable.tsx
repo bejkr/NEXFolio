@@ -38,9 +38,9 @@ export function CollectionTable({ data, onDelete }: CollectionTableProps) {
                     <Table>
                         <TableHeader className="bg-[#151A21]">
                             <TableRow className="border-b border-[rgba(255,255,255,0.06)] hover:bg-transparent">
-                                <TableHead className="text-gray-400 font-medium py-4 pl-6">Card / Product</TableHead>
+                                <TableHead className="text-gray-400 font-medium py-4 pl-4">Card / Product</TableHead>
                                 <TableHead className="text-gray-400 font-medium">Set / Expansion</TableHead>
-                                <TableHead className="text-gray-400 font-medium">Condition</TableHead>
+                                <TableHead className="text-gray-400 font-medium text-center">Quantity</TableHead>
                                 <TableHead className="text-right text-gray-400 font-medium">Cost Basis</TableHead>
                                 <TableHead className="text-right text-gray-400 font-medium">Market Value</TableHead>
                                 <TableHead className="text-right text-gray-400 font-medium">Total Return</TableHead>
@@ -49,31 +49,32 @@ export function CollectionTable({ data, onDelete }: CollectionTableProps) {
                         </TableHeader>
                         <TableBody>
                             {data.map((item) => {
-                                const { diff, perc } = calculateReturn(item.currentValue, item.costBasis);
+                                const qty = item.quantity || 1;
+                                const { diff, perc } = calculateReturn(item.currentValue * qty, item.costBasis * qty);
                                 const isPositive = diff >= 0;
-                                const returnColor = isPositive ? 'text-[#00E599]' : 'text-[#FF4D4D]';
+                                const returnColor = isPositive ? '!text-[#00E599]' : '!text-[#FF4D4D]';
 
                                 return (
                                     <TableRow key={item.id} className="border-b border-[rgba(255,255,255,0.02)] hover:bg-white/[0.02] transition-colors group">
-                                        <TableCell className="py-4 pl-6 group-hover:text-white transition-colors">
+                                        <TableCell className="py-4 pl-4 group-hover:text-white transition-colors">
                                             {item.productId ? (
                                                 <Link href={`/products/${item.productId}`} className="flex items-center space-x-4 hover:opacity-80 transition-opacity">
-                                                    <div className="w-10 h-14 rounded overflow-hidden bg-black/40 border border-white/5 flex-shrink-0 flex items-center justify-center">
-                                                        <img
-                                                            src={`/api/proxy-image?url=${encodeURIComponent(item.imageUrl)}`}
-                                                            alt={item.name}
-                                                            className="w-full h-full object-cover"
-                                                        />
+                                                    <div className="w-14 h-20 rounded overflow-hidden bg-black/40 border border-white/5 flex-shrink-0 flex items-center justify-center">
+                                                            <img
+                                                                src={`/api/proxy-image?url=${encodeURIComponent(item.imageUrl)}`}
+                                                                alt={item.name}
+                                                                className="w-full h-full object-contain p-0.5"
+                                                            />
                                                     </div>
                                                     <span className="font-semibold text-gray-200">{item.name}</span>
                                                 </Link>
                                             ) : (
                                                 <div className="flex items-center space-x-4">
-                                                    <div className="w-10 h-14 rounded overflow-hidden bg-black/40 border border-white/5 flex-shrink-0 flex items-center justify-center">
+                                                    <div className="w-14 h-20 rounded overflow-hidden bg-black/40 border border-white/5 flex-shrink-0 flex items-center justify-center">
                                                         <img
                                                             src={`/api/proxy-image?url=${encodeURIComponent(item.imageUrl)}`}
                                                             alt={item.name}
-                                                            className="w-full h-full object-cover"
+                                                            className="w-full h-full object-contain p-0.5"
                                                         />
                                                     </div>
                                                     <span className="font-semibold text-gray-200">{item.name}</span>
@@ -81,9 +82,9 @@ export function CollectionTable({ data, onDelete }: CollectionTableProps) {
                                             )}
                                         </TableCell>
                                         <TableCell className="text-gray-400">{item.set}</TableCell>
-                                        <TableCell>
-                                            <span className="inline-flex items-center rounded-md bg-white/[0.04] border border-white/5 px-2.5 py-1 text-xs font-medium text-gray-300">
-                                                {item.condition}
+                                        <TableCell className="text-center">
+                                            <span className="inline-flex items-center rounded-md bg-white/[0.04] border border-white/5 px-3 py-1 text-xs font-bold text-gray-200">
+                                                {(item as any).quantity || 1}x
                                             </span>
                                         </TableCell>
                                         <TableCell className="text-right text-gray-400 font-medium">
@@ -100,10 +101,10 @@ export function CollectionTable({ data, onDelete }: CollectionTableProps) {
                                                 </span>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-right pr-6">
+                                        <TableCell className="text-right pr-4">
                                             <button
                                                 onClick={() => onDelete?.(item.id)}
-                                                className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-all opacity-0 group-hover:opacity-100"
+                                                className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-500/10 rounded-md transition-all"
                                                 title="Delete item"
                                             >
                                                 <Trash2 className="w-4 h-4" />

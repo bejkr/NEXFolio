@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
-
-const prisma = new PrismaClient();
 
 export async function GET() {
     const supabase = createClient();
@@ -46,7 +44,8 @@ export async function POST(request: NextRequest) {
                 currentValue: data.currentValue,
                 purchaseDate: new Date(data.purchaseDate),
                 imageUrl: data.imageUrl,
-                productId: data.productId
+                productId: data.productId,
+                quantity: data.quantity || 1
             }
         });
 

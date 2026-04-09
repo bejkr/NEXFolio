@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { StoreDiscoveryService } from '@/lib/store-discovery';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 
-const prisma = new PrismaClient();
 const discoveryService = new StoreDiscoveryService();
 
 export async function GET(

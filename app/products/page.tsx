@@ -57,12 +57,7 @@ export default function ProductsPage() {
         return () => clearTimeout(timeoutId);
     }, [searchQuery, expansionFilter, yearFilter, sortFilter]);
 
-    // Mock analytical data generators for the UI
-    const getMockChange = (id: string, is30D: boolean) => {
-        const val = ((parseInt(id.replace(new RegExp('[^0-9]', 'g'), '') || '5')) % 20) - 10;
-        return is30D ? val : val * 3.5;
-    };
-    const getMockScore = (id: string) => 50 + ((parseInt(id.replace(new RegExp('[^0-9]', 'g'), '') || '5')) % 45);
+    // Metrics are now provided by the API
 
     return (
         <div className="p-6 lg:p-8 max-w-[1600px] mx-auto h-[calc(100vh-64px)] flex flex-col">
@@ -182,7 +177,8 @@ export default function ProductsPage() {
                                     </TableRow>
                                 ) : (
                                     products.map((product) => {
-                                        const change30D = getMockChange(product.id, true);
+                                        const change30D = product.change30D || 0;
+                                        const score = product.nexfolioScore || 50;
                                         return (
                                             <TableRow
                                                 key={product.id}
@@ -235,11 +231,11 @@ export default function ProductsPage() {
 
                                                 <TableCell className="py-4 text-right">
                                                     <div className="flex items-center justify-end space-x-2">
-                                                        <span className="text-sm font-medium text-gray-300">{getMockScore(product.id)}/100</span>
+                                                        <span className="text-sm font-medium text-gray-300">{score}/100</span>
                                                         <div className="w-12 h-1.5 rounded-full bg-[#151A21] overflow-hidden">
                                                             <div
                                                                 className="h-full bg-blue-500 rounded-full"
-                                                                style={{ width: `${getMockScore(product.id)}%` }}
+                                                                style={{ width: `${score}%` }}
                                                             />
                                                         </div>
                                                     </div>

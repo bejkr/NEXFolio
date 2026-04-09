@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, Prisma } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Prisma } from '@prisma/client';
+import prisma from '@/lib/prisma';
+import { calculateNexfolioScore, calculatePriceChange } from '@/lib/scoring';
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
@@ -42,7 +42,33 @@ export async function GET(request: NextRequest) {
         const products = await prisma.product.findMany({
             where,
             orderBy,
-            take: 50, // Limit to 50 for performance on initial load
+            take: 50,
+            include: {
+                priceHistory: {
+                    orderBy: {
+                        date: 'desc'
+                    },
+                    take: 60
+                }
+            }
+        });
+
+        // Calculate real metrics for each product with safety
+        const productsWithMetrics = products.map(p => {
+            try {
+                return {
+                    ...p,
+                    nexfolioScore: calculateNexfolioScore(p, p.priceHistory || []),
+                    change30D: calculatePriceChange(p.priceHistory || [], 30)
+                };
+            } catch (err) {
+                console.error(`Scoring error for product ${p.id}:`, err);
+                return {
+                    ...p,
+                    nexfolioScore: 50,
+                    change30D: 0
+                };
+            }
         });
 
         // Also fetch unique sets and years for the filter dropdowns
@@ -77,7 +103,7 @@ export async function GET(request: NextRequest) {
         });
 
         return NextResponse.json({
-            products,
+            products: productsWithMetrics,
             filters: {
                 expansions: { main: mainSets, other: otherSets },
                 years: uniqueYears.map(y => y.releaseYear).filter(Boolean) as number[]
@@ -86,6 +112,6 @@ export async function GET(request: NextRequest) {
 
     } catch (error: any) {
         console.error('API /api/products Error:', error);
-        return NextResponse.json({ error: 'Failed to fetch products from database' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to fetch products from database', details: error.message }, { status: 500 });
     }
 }

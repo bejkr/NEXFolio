@@ -6,6 +6,7 @@ export interface PortfolioSummary {
     };
     cagr12M: number;
     volatilityIndex: number;
+    totalItems: number;
 }
 
 export interface RiskMetrics {
@@ -44,6 +45,8 @@ export interface TopMover {
     change30D: number;
     change12M: number;
     liquidityScore: number;
+    imageUrl?: string;
+    productId?: string;
 }
 
 export const mockPortfolioSummary: PortfolioSummary = {
@@ -54,6 +57,7 @@ export const mockPortfolioSummary: PortfolioSummary = {
     },
     cagr12M: 0,
     volatilityIndex: 0,
+    totalItems: 0,
 };
 
 export const mockRiskMetrics: RiskMetrics = {
@@ -86,6 +90,7 @@ export interface CollectionItem {
     currentValue: number;
     purchaseDate: string;
     imageUrl: string;
+    quantity: number;
     productId?: string | null;
     product?: any | null;
 }

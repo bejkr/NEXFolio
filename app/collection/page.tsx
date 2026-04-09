@@ -42,8 +42,8 @@ export default function CollectionPage() {
 
     // Calculate total collection metrics
     const totalItems = items.length;
-    const totalValue = items.reduce((acc, item) => acc + item.currentValue, 0);
-    const totalCost = items.reduce((acc, item) => acc + item.costBasis, 0);
+    const totalValue = items.reduce((acc, item) => acc + (item.currentValue * (item.quantity || 1)), 0);
+    const totalCost = items.reduce((acc, item) => acc + (item.costBasis * (item.quantity || 1)), 0);
     const totalProfit = totalValue - totalCost;
     const totalProfitPerc = (totalProfit / totalCost) * 100;
 
@@ -83,7 +83,7 @@ export default function CollectionPage() {
     };
 
     return (
-        <div className="p-6 md:p-8 max-w-7xl mx-auto w-full">
+        <div className="p-4 md:p-6 max-w-7xl mx-auto w-full">
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-white mb-2">My Collection</h1>
@@ -98,10 +98,10 @@ export default function CollectionPage() {
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Cost</p>
                             <span className="text-2xl md:text-3xl font-bold text-white tracking-tight">{formatCurrency(totalCost)}</span>
                         </div>
-                        <div className="border-l border-[rgba(255,255,255,0.06)] pl-6 md:pl-8">
+                        <div className="lg:border-l border-[rgba(255,255,255,0.06)] lg:pl-8">
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Profit / Loss</p>
                             <div className="flex flex-col">
-                                <span className={`text-2xl md:text-3xl font-bold tracking-tight ${totalProfit >= 0 ? 'text-[#00E599]' : 'text-[#FF4D4D]'}`}>
+                                <span className={`text-2xl md:text-3xl font-bold tracking-tight whitespace-nowrap ${totalProfit >= 0 ? 'text-[#00E599]' : 'text-[#FF4D4D]'}`}>
                                     {totalProfit >= 0 ? '+' : ''}{formatCurrency(totalProfit)}
                                 </span>
                                 <span className={`text-xs font-bold ${totalProfit >= 0 ? 'text-[#00E599]' : 'text-[#FF4D4D]'} opacity-80`}>
@@ -115,10 +115,10 @@ export default function CollectionPage() {
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center space-x-3 shrink-0">
+                <div className="flex items-center space-x-3 shrink-0 w-full md:w-auto">
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="bg-primary text-[#0E1116] hover:bg-[#00c885] transition-all shadow-[0_0_15px_rgba(0,229,153,0.3)] hover:shadow-[0_0_20px_rgba(0,229,153,0.5)] rounded-md px-4 py-2 text-sm font-bold border border-transparent"
+                        className="w-full md:w-auto bg-primary text-[#0E1116] hover:bg-[#00c885] transition-all shadow-[0_0_15px_rgba(0,229,153,0.3)] hover:shadow-[0_0_20px_rgba(0,229,153,0.5)] rounded-md px-6 py-3 md:px-4 md:py-2 text-sm font-bold border border-transparent"
                     >
                         Add Item
                     </button>

@@ -32,8 +32,9 @@ export function AddItemModal({ isOpen, onClose, onAdd }: Props) {
         costBasis: '',
         purchaseDate: new Date().toISOString().split('T')[0],
         imageUrl: '',
-        currentValue: 0, // hidden/internal state
-        productId: null as string | null
+        currentValue: 0, 
+        productId: null as string | null,
+        quantity: 1
     });
 
     // Handle clicking outside of suggestions
@@ -97,7 +98,8 @@ export function AddItemModal({ isOpen, onClose, onAdd }: Props) {
             currentValue: formData.currentValue,
             purchaseDate: formData.purchaseDate,
             imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1613771404784-3a5686aa2be3?q=80&w=100&auto=format&fit=crop',
-            productId: formData.productId
+            productId: formData.productId,
+            quantity: formData.quantity
         };
 
         try {
@@ -112,7 +114,8 @@ export function AddItemModal({ isOpen, onClose, onAdd }: Props) {
                     currentValue: newItem.currentValue,
                     purchaseDate: newItem.purchaseDate,
                     imageUrl: newItem.imageUrl,
-                    productId: newItem.productId
+                    productId: newItem.productId,
+                    quantity: newItem.quantity
                 }),
             });
 
@@ -122,7 +125,7 @@ export function AddItemModal({ isOpen, onClose, onAdd }: Props) {
             onAdd(savedAsset);
 
             setFormData({
-                name: '', set: '', category: 'Sealed', costBasis: '', currentValue: 0, purchaseDate: new Date().toISOString().split('T')[0], imageUrl: '', productId: null
+                name: '', set: '', category: 'Sealed', costBasis: '', currentValue: 0, purchaseDate: new Date().toISOString().split('T')[0], imageUrl: '', productId: null, quantity: 1
             });
             onClose();
         } catch (error) {
@@ -244,6 +247,18 @@ export function AddItemModal({ isOpen, onClose, onAdd }: Props) {
                                     onChange={e => setFormData({ ...formData, costBasis: e.target.value })}
                                     placeholder="0.00"
                                     className="w-full bg-[#0E1116] border border-[rgba(255,255,255,0.06)] rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-primary"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Quantity</label>
+                                <input
+                                    required
+                                    type="number"
+                                    min="1"
+                                    value={formData.quantity}
+                                    onChange={e => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
+                                    className="w-full bg-[#0E1116] border border-[rgba(255,255,255,0.06)] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary"
                                 />
                             </div>
 

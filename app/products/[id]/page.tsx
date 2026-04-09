@@ -11,7 +11,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     const router = useRouter();
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [syncing, setSyncing] = useState(false);
+
 
     // Clean dynamic DB ids
     const dbId = params.id.startsWith('db_') ? params.id.replace('db_', '') : params.id;
@@ -43,28 +43,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
         fetchProduct();
     }, [dbId]);
 
-    const handleSync = async () => {
-        setSyncing(true);
-        try {
-            const res = await fetch(`/api/products/${dbId}/sync`, { method: 'POST' });
-            if (res.ok) {
-                // Refresh product data
-                const prodRes = await fetch(`/api/products/${dbId}`);
-                const data = await prodRes.json();
-                setProduct(data);
-            }
-        } catch (error) {
-            console.error("Sync failed:", error);
-        } finally {
-            setSyncing(false);
-        }
-    };
 
-    const getMockChange = (id: string, is30D: boolean) => {
-        const val = ((parseInt(id.replace(/[^0-9]/g, '') || '5')) % 20) - 10;
-        return is30D ? val : val * 3.5;
-    };
-    const getMockScore = (id: string) => 50 + ((parseInt(id.replace(/[^0-9]/g, '') || '5')) % 45);
 
     if (loading) {
         return (
@@ -75,18 +54,24 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     }
 
     if (!product) return null;
-
+    
+    // Use real metrics from API
     const price = product.price || 0;
-    const change30D = getMockChange(product.id, true);
-    const change12M = getMockChange(product.id, false);
-    const score = getMockScore(product.id);
+    const change30D = product.change30D || 0;
+    const change12M = product.change12M || 0;
+    const score = product.nexfolioScore || 50;
     const isPositive = change12M >= 0;
 
-    // Generate mock chart data based on price
-    const mockChartData = Array.from({ length: 30 }).map((_, i) => ({
-        date: `Day ${i + 1}`,
-        value: price * (1 + (Math.sin(i / 3) * 0.1) + (i * 0.005))
-    }));
+    // Use real chart data from product.priceHistory
+    const chartData = product.priceHistory && product.priceHistory.length > 0
+        ? product.priceHistory.map((h: any) => ({
+            date: new Date(h.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+            value: h.price
+        }))
+        : [{
+            date: 'Current',
+            value: price
+        }];
 
     return (
         <div className="p-6 lg:p-8 max-w-[1200px] mx-auto space-y-6">
@@ -130,7 +115,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                         <span className="text-4xl font-bold text-white tracking-tight">
                             {product.price ? `€${product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : 'N/A'}
                         </span>
-                        {product.currency && <span className="text-sm text-gray-500 uppercase">{product.currency}</span>}
+
                     </div>
 
                     <div className="mt-2 flex items-center gap-2">
@@ -143,6 +128,11 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                                 ESTIMATED
                             </span>
                         )}
+                        {product.availabilityCount !== null && (
+                            <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border ${product.availabilityCount < 20 ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20' : 'text-blue-400 bg-blue-500/10 border-blue-500/20'}`}>
+                                <ShoppingCart className="w-3 h-3 mr-1" /> {product.availabilityCount} AVAILABLE
+                            </span>
+                        )}
                         {product.lastPriceSync && (
                             <span className="text-[10px] text-gray-500">
                                 Updated {new Date(product.lastPriceSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -150,26 +140,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                         )}
                     </div>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        {product.ebayUrl && (
-                            <a
-                                href={product.ebayUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center px-3 py-1.5 rounded-md bg-white/5 border border-white/10 text-xs font-semibold text-primary hover:bg-white/10 transition-colors"
-                            >
-                                View on eBay →
-                            </a>
-                        )}
-                        <button
-                            onClick={handleSync}
-                            disabled={syncing}
-                            className="inline-flex items-center px-3 py-1.5 rounded-md bg-primary/10 border border-primary/20 text-xs font-semibold text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
-                        >
-                            {syncing ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <TrendingUp className="w-3 h-3 mr-2" />}
-                            Sync Now
-                        </button>
-                    </div>
+
                     <div className="mt-2 flex items-center gap-4">
                         <span className={`flex items-center text-sm font-semibold ${change30D >= 0 ? 'text-[#00E599]' : 'text-[#FF4D4D]'}`}>
                             {change30D >= 0 ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
@@ -199,7 +170,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                         </div>
                         <div className="h-[350px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={mockChartData}>
+                                <LineChart data={chartData}>
                                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                                     <XAxis
                                         dataKey="date"
@@ -275,6 +246,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                                         <TrendingUp className="w-4 h-4 mr-2" /> Volatility
                                     </div>
                                     <span className="text-sm font-medium text-white">{score > 70 ? 'High' : 'Medium'}</span>
+                                </div>
+                                <div className="p-4 flex justify-between items-center">
+                                    <div className="flex items-center text-sm text-gray-400">
+                                        <ShoppingCart className="w-4 h-4 mr-2" /> Market Availability
+                                    </div>
+                                    <span className={`text-sm font-bold ${product.availabilityCount < 20 ? 'text-yellow-500' : 'text-primary'}`}>
+                                        {product.availabilityCount ?? 'N/A'}
+                                    </span>
                                 </div>
                                 <div className="p-4 flex justify-between items-center">
                                     <div className="flex items-center text-sm text-gray-400">

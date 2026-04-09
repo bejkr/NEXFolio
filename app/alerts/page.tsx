@@ -1,11 +1,12 @@
 'use client';
 
 import { Bell, TrendingUp, Info, AlertTriangle, Check, Clock, Trash2 } from 'lucide-react';
-import { mockAlerts, Alert } from '@/lib/mockData';
+import { useNotifications } from '@/context/NotificationContext';
 import { useState } from 'react';
+import { format } from 'date-fns';
 
 export default function AlertsPage() {
-    const [alerts, setAlerts] = useState<Alert[]>(mockAlerts);
+    const { alerts, markAsRead, deleteAlert, markAllAsRead } = useNotifications();
     const [activeTab, setActiveTab] = useState<'all' | 'price' | 'system' | 'availability'>('all');
 
     const filteredAlerts = alerts.filter(alert =>
@@ -30,22 +31,12 @@ export default function AlertsPage() {
         }
     };
 
-    const markAsRead = (id: string) => {
-        setAlerts(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
-    };
-
-    const deleteAlert = (id: string) => {
-        setAlerts(prev => prev.filter(a => a.id !== id));
-    };
-
     const formatTime = (dateStr: string) => {
-        const date = new Date(dateStr);
-        return date.toLocaleString('en-IE', {
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        });
+        try {
+            return format(new Date(dateStr), 'MMM d, HH:mm');
+        } catch (e) {
+            return dateStr;
+        }
     };
 
     return (
@@ -57,7 +48,7 @@ export default function AlertsPage() {
                 </div>
                 <div className="flex items-center space-x-3">
                     <button
-                        onClick={() => setAlerts(prev => prev.map(a => ({ ...a, read: true })))}
+                        onClick={markAllAsRead}
                         className="text-xs font-semibold text-gray-400 hover:text-white transition-colors"
                     >
                         Mark all as read

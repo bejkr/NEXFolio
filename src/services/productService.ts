@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../../lib/prisma';
 import { logger } from '../utils/logger';
-
-const prisma = new PrismaClient();
 
 export interface ProductData {
     externalId: string;
@@ -12,6 +10,7 @@ export interface ProductData {
     imageUrl?: string;
     source?: string;
     price?: number;
+    cardmarketUrl?: string;
 }
 
 export const productService = {
@@ -26,6 +25,7 @@ export const productService = {
                     releaseYear: data.releaseYear,
                     imageUrl: data.imageUrl,
                     price: data.price,
+                    cardmarketUrl: data.cardmarketUrl,
                     updatedAt: new Date(),
                 },
                 create: {

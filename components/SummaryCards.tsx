@@ -39,15 +39,15 @@ export function SummaryCards({ data }: SummaryCardsProps) {
 
             <Card>
                 <CardHeader className="pb-2">
-                    <CardTitle>12M CAGR</CardTitle>
+                    <CardTitle>Total Items</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="text-3xl font-bold tracking-tight text-white mb-1">
-                        {data.cagr12M > 0 ? '+' : ''}{data.cagr12M.toFixed(1)}%
+                        {data.totalItems}
                     </div>
                     <div className="flex items-center text-xs font-medium text-success-text">
                         <ArrowUpRight className="h-3 w-3 mr-1" />
-                        Trend positive
+                        Assets in collection
                     </div>
                 </CardContent>
             </Card>

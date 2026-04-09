@@ -284,7 +284,7 @@ export const cardmarketService = {
         }
     },
 
-    async fetchProductDetails(productUrl: string): Promise<{ trendPrice?: number, fromPrice?: number, thirtyDayAvg?: number }> {
+    async fetchProductDetails(productUrl: string): Promise<{ trendPrice?: number, fromPrice?: number, oneDayAvg?: number, sevenDayAvg?: number, thirtyDayAvg?: number, availableItems?: number }> {
         // Enforce English language filter
         const urlToFetch = productUrl.includes('?') 
             ? `${productUrl}&language=1` 
@@ -296,13 +296,38 @@ export const cardmarketService = {
             
             let trendPrice: number | undefined;
             let fromPrice: number | undefined;
+            let oneDayAvg: number | undefined;
+            let sevenDayAvg: number | undefined;
             let thirtyDayAvg: number | undefined;
+            let availableItems: number | undefined;
 
             const parsePriceString = (str: string) => {
-                // Remove currency symbol and decode special spaces, then replace comma with dot
-                const clean = str.replace(/[€$£]/g, '').trim().replace(/\s/g, '').replace(',', '.');
+                // 1. Remove currency and whitespace
+                let clean = str.replace(/[€$£]/g, '').trim().replace(/\s/g, '');
+                
+                // 2. Identify if it's European (1.234,56) or English (1,234.56)
+                // If it has both . and , check which one comes last
+                const lastComma = clean.lastIndexOf(',');
+                const lastDot = clean.lastIndexOf('.');
+                
+                if (lastComma > lastDot) {
+                    // European: remove all dots (thousands), replace comma with dot (decimal)
+                    clean = clean.replace(/\./g, '').replace(',', '.');
+                } else if (lastDot > lastComma) {
+                    // English: remove all commas (thousands)
+                    clean = clean.replace(/,/g, '');
+                } else if (lastComma !== -1 && lastDot === -1) {
+                    // Only comma: replace with dot
+                    clean = clean.replace(',', '.');
+                }
+                // If only dot or no separators, parseFloat handles it directly
+                
                 const parsed = parseFloat(clean);
-                return isNaN(parsed) ? undefined : parsed;
+                if (isNaN(parsed)) {
+                    logger.warn(`Failed to parse price string: "${str}"`);
+                    return undefined;
+                }
+                return parsed;
             };
 
             $('.info-list-container dl').each((_, dl) => {
@@ -311,13 +336,21 @@ export const cardmarketService = {
                     const dd = $(dt).next('dd');
                     const value = $(dd).text().trim();
                     
-                    if (label.includes('Trend Price')) trendPrice = parsePriceString(value);
-                    if (label.includes('From')) fromPrice = parsePriceString(value);
-                    if (label.includes('30-days average price')) thirtyDayAvg = parsePriceString(value);
+                    if (label.includes('Trend Price') || label.includes('Price Trend')) trendPrice = parsePriceString(value);
+                    if (label.toLowerCase().includes('from')) fromPrice = parsePriceString(value);
+                    if (label.includes('1-day average price')) oneDayAvg = parsePriceString(value);
+                    if (label.includes('7-day average price')) sevenDayAvg = parsePriceString(value);
+                    if (label.includes('30-days average price') || label.includes('30-day average price')) thirtyDayAvg = parsePriceString(value);
+                    if (label.toLowerCase().includes('available items') || 
+                        label.toLowerCase().includes('available product') ||
+                        label.toLowerCase().includes('number of items') ||
+                        label.toLowerCase().includes('items available')) {
+                        availableItems = parseInt(value.replace(/\D/g, ''));
+                    }
                 });
             });
 
-            return { trendPrice, fromPrice, thirtyDayAvg };
+            return { trendPrice, fromPrice, oneDayAvg, sevenDayAvg, thirtyDayAvg, availableItems };
         } catch (error) {
             logger.warn(`Could not fetch product details for ${urlToFetch}`);
             return {};

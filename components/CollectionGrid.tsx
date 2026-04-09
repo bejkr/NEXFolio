@@ -33,34 +33,35 @@ export function CollectionGrid({ data, onDelete }: CollectionGridProps) {
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {data.map((item) => {
-                const { diff, perc } = calculateReturn(item.currentValue, item.costBasis);
+                const qty = item.quantity || 1;
+                const { diff, perc } = calculateReturn(item.currentValue * qty, item.costBasis * qty);
                 const isPositive = diff >= 0;
-                const returnColor = isPositive ? 'text-[#00E599]' : 'text-[#FF4D4D]';
+                const returnColor = isPositive ? '!text-[#00E599]' : '!text-[#FF4D4D]';
 
                 return (
                     <Card key={item.id} className="bg-[#151A21] border border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.2)] transition-all overflow-hidden group cursor-pointer flex flex-col h-full">
                         {item.productId ? (
                             <Link href={`/products/${item.productId}`} className="contents">
-                                <div className="relative aspect-[3/4] w-full bg-black/40 border-b border-[rgba(255,255,255,0.06)] overflow-hidden flex items-center justify-center">
+                                <div className="relative aspect-square w-full bg-black/40 border-b border-[rgba(255,255,255,0.06)] overflow-hidden flex items-center justify-center">
                                     <img
                                         src={`/api/proxy-image?url=${encodeURIComponent(item.imageUrl)}`}
                                         alt={item.name}
-                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                        className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
                                     />
-                                    <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-[10px] font-medium text-gray-300">
-                                        {item.condition}
+                                    <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-[10px] font-bold text-gray-200">
+                                        {(item as any).quantity || 1}x
                                     </div>
                                 </div>
                             </Link>
                         ) : (
-                            <div className="relative aspect-[3/4] w-full bg-black/40 border-b border-[rgba(255,255,255,0.06)] overflow-hidden flex items-center justify-center">
+                        <div className="relative aspect-square w-full bg-black/40 border-b border-[rgba(255,255,255,0.06)] overflow-hidden flex items-center justify-center">
                                 <img
                                     src={`/api/proxy-image?url=${encodeURIComponent(item.imageUrl)}`}
                                     alt={item.name}
-                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                    className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
                                 />
-                                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-[10px] font-medium text-gray-300">
-                                    {item.condition}
+                                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-md border border-white/10 text-[10px] font-bold text-gray-200">
+                                    {(item as any).quantity || 1}x
                                 </div>
                             </div>
                         )}
@@ -69,31 +70,31 @@ export function CollectionGrid({ data, onDelete }: CollectionGridProps) {
                                 e.stopPropagation();
                                 onDelete?.(item.id);
                             }}
-                            className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-md text-gray-400 hover:text-red-500 rounded-md border border-white/10 opacity-0 group-hover:opacity-100 transition-all z-10"
+                            className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-md text-gray-400 hover:text-red-500 rounded-md border border-white/10 transition-all z-10"
                             title="Delete item"
                         >
                             <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                        <CardContent className="p-4 flex flex-col flex-1">
+                        <CardContent className="p-3 pb-4 flex flex-col flex-1">
                             {item.productId ? (
                                 <Link href={`/products/${item.productId}`} className="block hover:opacity-80 transition-opacity">
-                                    <p className="text-xs text-gray-400 mb-1">{item.set}</p>
-                                    <h3 className="font-semibold text-gray-200 line-clamp-2 mb-3 flex-1">{item.name}</h3>
+                                    <p className="text-[10px] text-gray-400 mb-0.5">{item.set}</p>
+                                    <h3 className="text-sm font-semibold text-gray-200 line-clamp-2 mb-1 flex-1 leading-tight">{item.name}</h3>
                                 </Link>
                             ) : (
                                 <>
-                                    <p className="text-xs text-gray-400 mb-1">{item.set}</p>
-                                    <h3 className="font-semibold text-gray-200 line-clamp-2 mb-3 flex-1">{item.name}</h3>
+                                    <p className="text-[10px] text-gray-400 mb-0.5">{item.set}</p>
+                                    <h3 className="text-sm font-semibold text-gray-200 line-clamp-2 mb-1 flex-1 leading-tight">{item.name}</h3>
                                 </>
                             )}
 
-                            <div className="flex justify-between items-end mt-auto pt-3 border-t border-[rgba(255,255,255,0.06)]">
+                            <div className="flex justify-between items-end mt-auto pt-2 border-t border-[rgba(255,255,255,0.06)]">
                                 <div>
-                                    <p className="text-xs text-gray-500 mb-0.5">Market Value</p>
-                                    <p className="font-bold tracking-tight text-white">{formatCurrency(item.currentValue)}</p>
+                                    <p className="text-[10px] text-gray-500 mb-0">Market Value</p>
+                                    <p className="font-bold tracking-tight text-white text-sm">{formatCurrency(item.currentValue)}</p>
                                 </div>
                                 <div className={`flex flex-col items-end ${returnColor}`}>
-                                    <span className="text-sm font-medium">{isPositive ? '+' : ''}{perc.toFixed(2)}%</span>
+                                    <span className="text-xs font-semibold">{isPositive ? '+' : ''}{perc.toFixed(2)}%</span>
                                 </div>
                             </div>
                         </CardContent>

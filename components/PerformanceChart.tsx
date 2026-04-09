@@ -67,7 +67,7 @@ export function PerformanceChart({ data: initialData, summary }: PerformanceChar
 
     const filters = ['1D', '7D', '1M', '3M', '6M', 'MAX'];
 
-    const latestValue = chartData.length > 0 ? chartData[chartData.length - 1].value : summary.totalValue;
+    const latestValue = summary.totalValue;
     const startValue = chartData.length > 0 ? chartData[0].value : summary.totalValue;
     const periodChange = latestValue - startValue;
     const periodChangePercent = startValue > 0 ? (periodChange / startValue) * 100 : 0;
@@ -83,12 +83,12 @@ export function PerformanceChart({ data: initialData, summary }: PerformanceChar
                     {periodChange >= 0 ? '+' : ''}{customFormatter(periodChange)} ({periodChange >= 0 ? '+' : ''}{periodChangePercent.toFixed(2)}%) in the last {timeFilter}
                 </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-0">
                 <div className={`h-[320px] w-full transition-opacity duration-300 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart
                             data={chartData}
-                            margin={{ top: 5, right: 10, left: 10, bottom: 0 }}
+                            margin={{ top: 5, right: 0, left: -20, bottom: 0 }}
                         >
                             <defs>
                                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -107,11 +107,12 @@ export function PerformanceChart({ data: initialData, summary }: PerformanceChar
                                 minTickGap={30}
                             />
                             <YAxis
+                                width={30}
                                 axisLine={false}
                                 tickLine={false}
                                 tick={{ fill: '#6b7280', fontSize: 12 }}
                                 tickFormatter={formatYAxis}
-                                dx={-10}
+                                domain={['auto', 'auto']}
                             />
                             <Tooltip
                                 contentStyle={{

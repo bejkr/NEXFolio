@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
 
         // Add the very last point (current value) if not already close
         const lastPoint = dataPoints[dataPoints.length - 1];
-        if (lastPoint && new Date(lastPoint.month).getTime() < now.getTime() - (intervalDays / 2) * 24 * 60 * 60 * 1000) {
+        if (lastPoint && new Date(lastPoint.month).getTime() < now.getTime()) {
            let totalValueNow = assets.reduce((sum: number, asset: any) => sum + (asset.product?.price ?? asset.currentValue), 0);
              dataPoints.push({
                 month: now.toISOString(),

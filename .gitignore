@@ -35,6 +35,7 @@ yarn-error.log*
 next-env.d.ts
 
 # temp files
+/tmp
 *.json
 !package.json
 !package-lock.json
@@ -43,6 +44,7 @@ next-env.d.ts
 !postcss.config.js
 !tailwind.config.ts
 debug-*.html
+error_body.html
 prisma_error.log
 serper-*.json
 test-*.js

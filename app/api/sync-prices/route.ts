@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import { EbayClient } from '@/lib/ebay';
 import pLimit from 'p-limit';
 
-const prisma = new PrismaClient();
 const ebay = new EbayClient();
 const limit = pLimit(2); // Keep it low for sandbox/rate limits
 

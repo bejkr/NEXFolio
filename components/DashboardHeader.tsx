@@ -35,19 +35,6 @@ export function DashboardHeader({ lastSync }: DashboardHeaderProps) {
                     </p>
                 )}
             </div>
-            <div className="flex items-center space-x-3">
-                <button className="bg-[#151A21] text-gray-300 border border-[rgba(255,255,255,0.06)] hover:bg-white/[0.02] hover:text-white transition-colors rounded-md px-4 py-2 text-sm font-medium">
-                    Export
-                </button>
-                <button
-                    disabled={syncing}
-                    onClick={handleSync}
-                    className="bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors rounded-md px-4 py-2 text-sm font-medium flex items-center gap-2 disabled:opacity-50"
-                >
-                    {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <TrendingUp className="w-4 h-4" />}
-                    Sync Now
-                </button>
-            </div>
         </div>
     );
 }
