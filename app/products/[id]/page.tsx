@@ -141,13 +141,40 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                     </div>
 
 
-                    <div className="mt-2 flex items-center gap-4">
+                    <div className="mt-4 grid grid-cols-2 gap-2 border-t border-white/5 pt-4">
+                        <div>
+                            <p className="text-[10px] text-gray-500 uppercase">Trend Price</p>
+                            <p className="text-sm font-semibold text-white">
+                                {product.trendPrice ? `€${product.trendPrice.toFixed(2)}` : '—'}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-gray-500 uppercase">7D Average</p>
+                            <p className="text-sm font-semibold text-white">
+                                {product.sevenDayAvg ? `€${product.sevenDayAvg.toFixed(2)}` : '—'}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-gray-500 uppercase">30D Average</p>
+                            <p className="text-sm font-semibold text-white">
+                                {product.thirtyDayAvg ? `€${product.thirtyDayAvg.toFixed(2)}` : '—'}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] text-gray-500 uppercase">From Price</p>
+                            <p className={`text-sm font-semibold ${product.priceReason?.includes('outlier') ? 'text-red-400' : 'text-white'}`}>
+                                {product.fromPrice ? `€${product.fromPrice.toFixed(2)}` : '—'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between">
                         <span className={`flex items-center text-sm font-semibold ${change30D >= 0 ? 'text-[#00E599]' : 'text-[#FF4D4D]'}`}>
                             {change30D >= 0 ? <ArrowUpRight className="w-4 h-4 mr-1" /> : <ArrowDownRight className="w-4 h-4 mr-1" />}
                             {Math.abs(change30D).toFixed(1)}% (30D)
                         </span>
-                        <span className={`text-sm font-medium ${isPositive ? 'text-gray-300' : 'text-gray-500'}`}>
-                            {isPositive ? '+' : ''}{change12M.toFixed(1)}% (12M)
+                        <span className="text-[10px] text-gray-500 italic max-w-[150px] text-right leading-tight">
+                            {product.priceReason ? `Source: ${product.priceReason}` : 'Price estimate based on market data'}
                         </span>
                     </div>
                 </div>

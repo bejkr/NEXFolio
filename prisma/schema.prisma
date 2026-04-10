@@ -8,25 +8,37 @@ datasource db {
 }
 
 model Product {
-  id              String    @id @default(uuid())
-  externalId      String    @unique
-  cardmarketUrl   String?
-  name            String
-  expansion       String
-  category        String
-  releaseYear     Int?
-  imageUrl        String?
-  price           Float?
-  currency        String?
-  ebayUrl         String?
-  ebayItemId      String?   @unique
-  lastPriceSync   DateTime?
+  id                String    @id @default(uuid())
+  externalId        String    @unique
+  cardmarketUrl     String?
+  name              String
+  expansion         String
+  category          String
+  releaseYear       Int?
+  imageUrl          String?
+
+  // === Cenové polia ===
+  price             Float?    // Najlepšia vypočítaná cena (váhovaný priemer)
+  currency          String?
+  // Granulárne Cardmarket metriky
+  trendPrice        Float?    // Cardmarket Trend Price
+  fromPrice         Float?    // Cardmarket From Price (najlacnejší listing)
+  oneDayAvg         Float?    // 1-day average price
+  sevenDayAvg       Float?    // 7-day average price
+  thirtyDayAvg      Float?    // 30-day average price
+  // Metadáta o cene
+  priceSource       String?   // 'cardmarket_scraper' | 'pokemon_api' | 'ebay' | 'manual'
+  priceReason       String?   // Debug: dôvod výberu ceny (z PriceEngine)
+
+  ebayUrl           String?
+  ebayItemId        String?   @unique
+  lastPriceSync     DateTime?
   availabilityCount Int?
-  source          String    @default("cardmarket")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  userAssets      UserAsset[]
-  priceHistory    PriceHistory[]
+  source            String    @default("cardmarket")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  userAssets        UserAsset[]
+  priceHistory      PriceHistory[]
 }
 
 model UserAsset {

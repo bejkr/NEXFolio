@@ -20,6 +20,7 @@ const summaryData: PortfolioSummary = {
     },
     cagr12M: 14.5,
     volatilityIndex: 12.2,
+    totalItems: 42,
 };
 
 const marketTrendData: MarketTrendData[] = [

@@ -8,6 +8,7 @@ export const landingPortfolioSummary: PortfolioSummary = {
     },
     cagr12M: 24.5,
     volatilityIndex: 12.8,
+    totalItems: 12,
 };
 
 export const landingPerformanceData: PerformanceData[] = [

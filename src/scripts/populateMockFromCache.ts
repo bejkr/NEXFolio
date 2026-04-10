@@ -123,7 +123,7 @@ async function main() {
     // Generate other sections
     const totalValue = generatedProducts.reduce((acc, p) => acc + (p.price * randomInt(1, 10)), 0);
 
-    const summaryStr = "export const mockPortfolioSummary: PortfolioSummary = {\n    totalValue: " + totalValue.toFixed(2) + ",\n    unrealizedGainLoss: { value: " + (totalValue * 0.15).toFixed(2) + ", percentage: 15.0 },\n    cagr12M: 12.5,\n    volatilityIndex: 14.2,\n};\n";
+    const summaryStr = "export const mockPortfolioSummary: PortfolioSummary = {\n    totalValue: " + totalValue.toFixed(2) + ",\n    unrealizedGainLoss: { value: " + (totalValue * 0.15).toFixed(2) + ", percentage: 15.0 },\n    cagr12M: 12.5,\n    volatilityIndex: 14.2,\n    totalItems: " + generatedProducts.length + ",\n};\n";
     const riskStr = "export const mockRiskMetrics: RiskMetrics = {\n    volatility: 14.2,\n    liquidityScore: 82,\n    concentrationIndex: 35,\n    analyticalText: \"Portfolio generated from real Cardmarket expansions.\",\n};\n";
 
     let collectionStr = "export const mockCollectionData: CollectionItem[] = [\n";
