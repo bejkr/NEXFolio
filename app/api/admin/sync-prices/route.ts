@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAdmin } from '@/lib/adminAuth';
 import { PriceSyncService } from '@/lib/price-sync';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
+    const denied = await requireAdmin(req);
+    if (denied) return denied;
+
     try {
-        // In a real app we'd add authentication here (e.g. check for admin role)
         const result = await PriceSyncService.syncPrices();
         return NextResponse.json({
             message: 'Price sync completed',
