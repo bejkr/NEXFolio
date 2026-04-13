@@ -71,3 +71,17 @@ model PriceHistory {
   @@index([productId])
   @@index([date])
 }
+
+model Alert {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String   // 'price' | 'system' | 'availability'
+  severity    String   // 'info' | 'warning' | 'critical'
+  title       String
+  description String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}

@@ -1,41 +1,88 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { mockAlerts, Alert } from '@/lib/mockData';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Alert } from '@/lib/mockData';
 
 interface NotificationContextType {
     alerts: Alert[];
     unreadCount: number;
+    loading: boolean;
     markAsRead: (id: string) => void;
     markAllAsRead: () => void;
     deleteAlert: (id: string) => void;
     addAlert: (alert: Omit<Alert, 'id' | 'timestamp' | 'read'>) => void;
+    refresh: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
     const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchAlerts = useCallback(async () => {
+        try {
+            const res = await fetch('/api/alerts');
+            if (!res.ok) return;
+            const data: Alert[] = await res.json();
+            setAlerts(data);
+        } catch {
+            // user not logged in or network error — silently ignore
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const generateAndFetch = useCallback(async () => {
+        try {
+            // Generate new alerts from price history (idempotent / deduplicated server-side)
+            await fetch('/api/alerts/generate', { method: 'POST' });
+        } catch {
+            // silently ignore
+        }
+        await fetchAlerts();
+    }, [fetchAlerts]);
 
     useEffect(() => {
-        // Initialize with mock data
-        setAlerts(mockAlerts);
-    }, []);
+        generateAndFetch();
+    }, [generateAndFetch]);
 
     const unreadCount = alerts.filter(a => !a.read).length;
 
-    const markAsRead = (id: string) => {
+    const markAsRead = async (id: string) => {
+        // Optimistic update
         setAlerts(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
+        try {
+            await fetch(`/api/alerts/${id}`, { method: 'PATCH' });
+        } catch {
+            // revert on failure
+            await fetchAlerts();
+        }
     };
 
-    const markAllAsRead = () => {
+    const markAllAsRead = async () => {
         setAlerts(prev => prev.map(a => ({ ...a, read: true })));
+        try {
+            await fetch('/api/alerts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'mark-all-read' }),
+            });
+        } catch {
+            await fetchAlerts();
+        }
     };
 
-    const deleteAlert = (id: string) => {
+    const deleteAlert = async (id: string) => {
         setAlerts(prev => prev.filter(a => a.id !== id));
+        try {
+            await fetch(`/api/alerts/${id}`, { method: 'DELETE' });
+        } catch {
+            await fetchAlerts();
+        }
     };
 
+    // addAlert: used for manual/system alerts (no DB persist needed for now)
     const addAlert = (newAlert: Omit<Alert, 'id' | 'timestamp' | 'read'>) => {
         const alert: Alert = {
             ...newAlert,
@@ -46,14 +93,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         setAlerts(prev => [alert, ...prev]);
     };
 
+    const refresh = useCallback(() => {
+        generateAndFetch();
+    }, [generateAndFetch]);
+
     return (
         <NotificationContext.Provider value={{
             alerts,
             unreadCount,
+            loading,
             markAsRead,
             markAllAsRead,
             deleteAlert,
             addAlert,
+            refresh,
         }}>
             {children}
         </NotificationContext.Provider>
