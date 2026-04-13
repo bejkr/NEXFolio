@@ -2,13 +2,14 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { CollectionFilters } from '@/components/CollectionFilters';
 import { CollectionTable } from '@/components/CollectionTable';
 import { CollectionGrid } from '@/components/CollectionGrid';
 import { AddItemModal } from '@/components/collection/AddItemModal';
 import { CollectionItem } from '@/lib/mockData';
 import { Loader2 } from 'lucide-react';
+import { Pagination } from '@/components/ui/Pagination';
 
 export default function CollectionPage() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -17,6 +18,10 @@ export default function CollectionPage() {
     const [items, setItems] = useState<CollectionItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+    // Pagination
+    const PAGE_SIZE = 20;
+    const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
         const fetchCollection = async () => {
@@ -55,10 +60,16 @@ export default function CollectionPage() {
             const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 item.set.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesCategory = activeCategory === 'All' ? true : item.category === activeCategory;
-
             return matchesSearch && matchesCategory;
         });
     }, [searchQuery, activeCategory, items]);
+
+    // Reset to page 1 when filters change
+    const handleSearchChange = useCallback((q: string) => { setSearchQuery(q); setCurrentPage(1); }, []);
+    const handleCategoryChange = useCallback((c: string) => { setActiveCategory(c); setCurrentPage(1); }, []);
+
+    const totalPages = Math.ceil(filteredData.length / PAGE_SIZE);
+    const paginatedData = filteredData.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     const handleAddItem = (newItem: CollectionItem) => {
         setItems(prev => [newItem, ...prev]);
@@ -127,9 +138,9 @@ export default function CollectionPage() {
 
             <CollectionFilters
                 searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
+                setSearchQuery={handleSearchChange}
                 activeCategory={activeCategory}
-                setActiveCategory={setActiveCategory}
+                setActiveCategory={handleCategoryChange}
                 viewMode={viewMode}
                 setViewMode={setViewMode}
             />
@@ -140,10 +151,18 @@ export default function CollectionPage() {
                     <p>Loading your collection...</p>
                 </div>
             ) : viewMode === 'list' ? (
-                <CollectionTable data={filteredData} onDelete={handleDeleteItem} />
+                <CollectionTable data={paginatedData} onDelete={handleDeleteItem} />
             ) : (
-                <CollectionGrid data={filteredData} onDelete={handleDeleteItem} />
+                <CollectionGrid data={paginatedData} onDelete={handleDeleteItem} />
             )}
+
+            <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredData.length}
+                pageSize={PAGE_SIZE}
+            />
 
             <AddItemModal
                 isOpen={isAddModalOpen}

@@ -3,12 +3,15 @@ import { Prisma } from '@prisma/client';
 import prisma from '@/lib/prisma';
 import { calculateNexfolioScore, calculatePriceChange } from '@/lib/scoring';
 
+const PAGE_SIZE = 25;
+
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('q') || '';
     const expansion = searchParams.get('expansion') || '';
     const releaseYearStr = searchParams.get('year');
     const sortStr = searchParams.get('sort') || 'name_asc';
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
 
     try {
         const where: Prisma.ProductWhereInput = {};
@@ -39,19 +42,21 @@ export async function GET(request: NextRequest) {
             orderBy = { releaseYear: 'asc' };
         }
 
-        const products = await prisma.product.findMany({
-            where,
-            orderBy,
-            take: 50,
-            include: {
-                priceHistory: {
-                    orderBy: {
-                        date: 'desc'
-                    },
-                    take: 60
+        const [total, products] = await Promise.all([
+            prisma.product.count({ where }),
+            prisma.product.findMany({
+                where,
+                orderBy,
+                take: PAGE_SIZE,
+                skip: (page - 1) * PAGE_SIZE,
+                include: {
+                    priceHistory: {
+                        orderBy: { date: 'desc' },
+                        take: 60
+                    }
                 }
-            }
-        });
+            })
+        ]);
 
         // Calculate real metrics for each product with safety
         const productsWithMetrics = products.map(p => {
@@ -104,6 +109,10 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({
             products: productsWithMetrics,
+            total,
+            page,
+            pageSize: PAGE_SIZE,
+            totalPages: Math.ceil(total / PAGE_SIZE),
             filters: {
                 expansions: { main: mainSets, other: otherSets },
                 years: uniqueYears.map(y => y.releaseYear).filter(Boolean) as number[]
