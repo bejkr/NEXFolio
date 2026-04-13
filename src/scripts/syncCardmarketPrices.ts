@@ -166,7 +166,7 @@ async function main() {
                     report.status = 'unchanged';
                     report.reason = 'skipped_cardmarket';
                     unchangedCount++;
-                    return;
+                    continue;
                 }
 
                 if (/[|<>{}[\]\\^`]/.test(productUrl) || productUrl.includes('test123')) {
@@ -174,7 +174,7 @@ async function main() {
                     report.status = 'failed';
                     report.reason = 'invalid_external_id';
                     failCount++;
-                    return;
+                    continue;
                 }
 
                 const rawDetails = await cardmarketService.fetchProductDetails(productUrl);
