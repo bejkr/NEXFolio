@@ -98,15 +98,15 @@ export interface CollectionItem {
 export const mockCollectionData: CollectionItem[] = [];
 
 export interface MarketOverviewData {
-    sealedIndex12M: number;
-    gradedIndex12M: number;
-    averageLiquidity: number;
-    marketVolatility: number;
+    sealedAvgPrice: number;    // avg current price across all tracked products
+    sealedIndex12M: number;    // avg 12M price change %
+    averageLiquidity: number;  // avg listings count (normalized 0-100)
+    marketVolatility: number;  // daily volatility %
 }
 
 export const mockMarketOverview: MarketOverviewData = {
+    sealedAvgPrice: 0,
     sealedIndex12M: 0,
-    gradedIndex12M: 0,
     averageLiquidity: 0,
     marketVolatility: 0,
 };
@@ -128,8 +128,8 @@ export interface MarketAsset {
     change12M: number;
     liquidityScore: number;
     activeListings: number;
-    sold7D: number;
-    sellThroughRate: number;
+    sold7D?: number;          // optional — not available from Cardmarket scrape
+    sellThroughRate?: number; // optional — not available from Cardmarket scrape
 }
 
 export const mockMarketGainers: MarketAsset[] = [];
@@ -141,7 +141,7 @@ export const mockLiquidityBoard: MarketAsset[] = [];
 export interface MarketTrendData {
     date: string;
     sealedIndex: number;
-    gradedIndex: number;
+    gradedIndex?: number; // optional — only available when graded data exists
 }
 
 export const mockMarketTrend: MarketTrendData[] = [];

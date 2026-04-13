@@ -52,9 +52,8 @@ export default function LoginPage() {
                 router.refresh()
             }
         } else {
-            // Overenie totožnosti hesiel pri registrácii
             if (password !== confirmPassword) {
-                setError("Heslá sa nezhodujú.")
+                setError("Passwords do not match.")
                 setIsLoading(false)
                 return
             }
@@ -71,7 +70,7 @@ export default function LoginPage() {
             if (error) {
                 setError(error.message)
             } else {
-                setSuccessMsg("Registrácia bola úspešná! Skontrolujte si email na potvrdenie účtu.")
+                setSuccessMsg("Registration successful! Please check your email to confirm your account.")
                 setIsLogin(true)
             }
         }
@@ -86,7 +85,7 @@ export default function LoginPage() {
                         Nexfolio
                     </h1>
                     <p className="text-zinc-400 mt-2">
-                        {isLogin ? "Prihláste sa do svojho účtu" : "Vytvorte si nový účet"}
+                        {isLogin ? "Sign in to your account" : "Create a new account"}
                     </p>
                 </div>
 
@@ -105,7 +104,7 @@ export default function LoginPage() {
                 <form onSubmit={handleAuth} className="space-y-4">
                     {!isLogin && (
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-300">Celé meno</label>
+                            <label className="text-sm font-medium text-zinc-300">Full Name</label>
                             <div className="relative">
                                 <User className="absolute left-3 top-3 h-5 w-5 text-zinc-500" />
                                 <input
@@ -114,7 +113,7 @@ export default function LoginPage() {
                                     value={fullName}
                                     onChange={(e) => setFullName(e.target.value)}
                                     className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 pl-10 pr-4 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                                    placeholder="Jozef Mak"
+                                    placeholder="John Doe"
                                 />
                             </div>
                         </div>
@@ -130,13 +129,13 @@ export default function LoginPage() {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 pl-10 pr-4 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                                placeholder="jozef@priklad.sk"
+                                placeholder="john@example.com"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-300">Heslo</label>
+                        <label className="text-sm font-medium text-zinc-300">Password</label>
                         <div className="relative">
                             <Lock className="absolute left-3 top-3 h-5 w-5 text-zinc-500" />
                             <input
@@ -151,7 +150,7 @@ export default function LoginPage() {
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
                                 className="absolute right-3 top-3 text-zinc-500 hover:text-zinc-300 transition-colors"
-                                title="Zobraziť/skryť heslo"
+                                title="Show/hide password"
                             >
                                 {showPassword ? (
                                     <EyeOff className="h-5 w-5" />
@@ -164,7 +163,7 @@ export default function LoginPage() {
 
                     {!isLogin && (
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-300">Potvrdenie hesla</label>
+                            <label className="text-sm font-medium text-zinc-300">Confirm Password</label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-3 h-5 w-5 text-zinc-500" />
                                 <input
@@ -179,7 +178,7 @@ export default function LoginPage() {
                                     type="button"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                     className="absolute right-3 top-3 text-zinc-500 hover:text-zinc-300 transition-colors"
-                                    title="Zobraziť/skryť heslo"
+                                    title="Show/hide password"
                                 >
                                     {showConfirmPassword ? (
                                         <EyeOff className="h-5 w-5" />
@@ -199,15 +198,15 @@ export default function LoginPage() {
                         {isLoading ? (
                             <Loader2 className="h-5 w-5 animate-spin" />
                         ) : isLogin ? (
-                            "Prihlásiť sa"
+                            "Sign In"
                         ) : (
-                            "Zaregistrovať sa"
+                            "Sign Up"
                         )}
                     </button>
                 </form>
 
                 <div className="mt-6 text-center text-sm text-zinc-400">
-                    {isLogin ? "Nemáte ešte účet?" : "Už máte účet?"}{" "}
+                    {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
                     <button
                         type="button"
                         onClick={() => {
@@ -216,7 +215,7 @@ export default function LoginPage() {
                         }}
                         className="text-emerald-500 hover:text-emerald-400 font-medium transition-colors"
                     >
-                        {isLogin ? "Zaregistrujte sa" : "Prihláste sa"}
+                        {isLogin ? "Sign up" : "Sign in"}
                     </button>
                 </div>
             </div>

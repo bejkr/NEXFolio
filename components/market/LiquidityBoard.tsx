@@ -44,12 +44,16 @@ export function LiquidityBoard({ data }: Props) {
                                         {item.activeListings}
                                     </TableCell>
                                     <TableCell className="py-4 text-right text-white font-semibold">
-                                        {item.sold7D}
+                                        {item.sold7D !== undefined ? item.sold7D : <span className="text-gray-600">—</span>}
                                     </TableCell>
                                     <TableCell className="py-4 text-right">
-                                        <div className="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                                            {item.sellThroughRate}%
-                                        </div>
+                                        {item.sellThroughRate !== undefined ? (
+                                            <div className="inline-flex items-center px-2 py-1 rounded-md text-sm font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                                                {item.sellThroughRate}%
+                                            </div>
+                                        ) : (
+                                            <span className="text-gray-600">—</span>
+                                        )}
                                     </TableCell>
                                     <TableCell className="py-4 text-right">
                                         <div className="w-full bg-white/5 rounded-full h-2 mt-2 max-w-[100px] ml-auto">
