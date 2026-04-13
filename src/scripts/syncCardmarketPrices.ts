@@ -160,11 +160,11 @@ async function main() {
             try {
                 const productUrl = buildProductUrl(product);
 
-                // Skip products marked as 'skip' or with invalid URLs
+                // Skip products explicitly excluded from Cardmarket sync
                 if (productUrl === null) {
-                    logger.info(`  ⏭ Skipping ${product.name} — excluded from Cardmarket sync`);
+                    logger.info(`  ⏭ Skipping ${product.name} — no Cardmarket listing`);
                     report.status = 'unchanged';
-                    report.reason = 'skipped_cardmarket';
+                    report.reason = 'no_cardmarket_listing';
                     unchangedCount++;
                     continue;
                 }
