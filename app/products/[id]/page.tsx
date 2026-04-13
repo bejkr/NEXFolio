@@ -11,6 +11,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     const router = useRouter();
     const [product, setProduct] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [activeRange, setActiveRange] = useState('1M');
 
 
     // Clean dynamic DB ids
@@ -62,16 +63,22 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     const score = product.nexfolioScore || 50;
     const isPositive = change12M >= 0;
 
-    // Use real chart data from product.priceHistory
+    // Filter price history by selected range
+    const rangeDays: Record<string, number> = { '1W': 7, '1M': 30, '3M': 90, '1Y': 365, 'ALL': Infinity };
+    const cutoff = rangeDays[activeRange] === Infinity
+        ? new Date(0)
+        : new Date(Date.now() - rangeDays[activeRange] * 24 * 60 * 60 * 1000);
+
+    const rangeLabels: Record<string, string> = { '1W': '7 Days', '1M': '30 Days', '3M': '3 Months', '1Y': '1 Year', 'ALL': 'All Time' };
+
     const chartData = product.priceHistory && product.priceHistory.length > 0
-        ? product.priceHistory.map((h: any) => ({
-            date: new Date(h.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-            value: h.price
-        }))
-        : [{
-            date: 'Current',
-            value: price
-        }];
+        ? product.priceHistory
+            .filter((h: any) => new Date(h.date) >= cutoff)
+            .map((h: any) => ({
+                date: new Date(h.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+                value: h.price
+            }))
+        : [{ date: 'Current', value: price }];
 
     return (
         <div className="p-6 lg:p-8 max-w-[1200px] mx-auto space-y-6">
@@ -186,10 +193,14 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                     {/* Interactive Chart */}
                     <Card className="bg-[#0E1116] border-[rgba(255,255,255,0.06)] p-6">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-semibold text-white">Price History (30 Days)</h3>
+                            <h3 className="text-lg font-semibold text-white">Price History ({rangeLabels[activeRange]})</h3>
                             <div className="flex space-x-2">
                                 {['1W', '1M', '3M', '1Y', 'ALL'].map(t => (
-                                    <button key={t} className={`px-3 py-1 text-xs font-medium rounded-md ${t === '1M' ? 'bg-primary/20 text-primary' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+                                    <button
+                                        key={t}
+                                        onClick={() => setActiveRange(t)}
+                                        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${t === activeRange ? 'bg-primary/20 text-primary' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                                    >
                                         {t}
                                     </button>
                                 ))}
