@@ -9,7 +9,10 @@
     "lint": "next lint",
     "sync:prices": "ts-node --project src/scripts/tsconfig.json src/scripts/syncEbayPrices.ts",
     "sync:products": "ts-node --project src/scripts/tsconfig.json src/scripts/syncSealedProducts.ts",
-    "sync:cardmarket:prices": "ts-node --project src/scripts/tsconfig.json src/scripts/syncCardmarketPrices.ts"
+    "sync:cardmarket:prices": "ts-node --project src/scripts/tsconfig.json src/scripts/syncCardmarketPrices.ts",
+    "sync:cardmarket:bulk": "ts-node --project src/scripts/tsconfig.json src/scripts/syncCardmarketBulk.ts",
+    "sync:cardmarket:cookies": "ts-node --project src/scripts/tsconfig.json src/scripts/refreshCookies.ts",
+    "fix:booster-bundle-urls": "ts-node --project src/scripts/tsconfig.json src/scripts/fixBoosterBundleUrls.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -22,6 +25,7 @@
     "dotenv": "^17.3.1",
     "framer-motion": "^12.38.0",
     "geist": "^1.7.0",
+    "got-scraping": "^4.2.1",
     "lucide-react": "^0.378.0",
     "next": "14.2.3",
     "p-limit": "^7.3.0",
