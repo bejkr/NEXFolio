@@ -63,6 +63,7 @@ export const LandingFooter: React.FC = () => {
                         <ul className="space-y-3 text-gray-500 text-sm">
                             <li><Link href="#features" className="hover:text-white transition-colors">Features</Link></li>
                             <li><Link href="#how-it-works" className="hover:text-white transition-colors">How it works</Link></li>
+                            <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
                             <li><Link href="/market" className="hover:text-white transition-colors">Market</Link></li>
                             <li><Link href="/products" className="hover:text-white transition-colors">Products database</Link></li>
                         </ul>

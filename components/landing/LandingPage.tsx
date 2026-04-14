@@ -7,6 +7,7 @@ import { ProblemSolution } from './ProblemSolution';
 import { HowItWorks } from './HowItWorks';
 import { FeaturesGrid } from './FeaturesGrid';
 import { InsightsSection, SocialProof } from './SocialProof';
+import { Pricing } from './Pricing';
 import { CTASection, LandingFooter } from './LandingFooter';
 import { ScrollReveal } from './ScrollReveal';
 
@@ -30,6 +31,9 @@ export default function LandingPage() {
                 </div>
                 <FeaturesGrid />
                 <InsightsSection />
+                <div id="pricing">
+                    <Pricing />
+                </div>
                 <SocialProof />
                 <CTASection />
             </main>
