@@ -93,19 +93,8 @@ export function CollectionGrid({ data, onDelete }: CollectionGridProps) {
                                     <p className="text-[10px] text-gray-500 mb-0">Market Value</p>
                                     <p className="font-bold tracking-tight text-white text-sm">{formatCurrency(item.currentValue)}</p>
                                 </div>
-                                <div className="flex flex-col items-end gap-1">
-                                    <span className={`text-xs font-semibold ${returnColor}`}>{isPositive ? '+' : ''}{perc.toFixed(2)}%</span>
-                                    {item.nexfolioScore != null && (
-                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border leading-none ${
-                                            item.nexfolioScore >= 70
-                                                ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                                                : item.nexfolioScore >= 40
-                                                ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-                                                : 'text-red-400 bg-red-500/10 border-red-500/20'
-                                        }`}>
-                                            ★ {item.nexfolioScore}
-                                        </span>
-                                    )}
+                                <div className={`flex flex-col items-end ${returnColor}`}>
+                                    <span className="text-xs font-semibold">{isPositive ? '+' : ''}{perc.toFixed(2)}%</span>
                                 </div>
                             </div>
                         </CardContent>

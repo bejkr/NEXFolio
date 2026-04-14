@@ -44,7 +44,6 @@ export function CollectionTable({ data, onDelete }: CollectionTableProps) {
                                 <TableHead className="text-right text-gray-400 font-medium">Cost Basis</TableHead>
                                 <TableHead className="text-right text-gray-400 font-medium">Market Value</TableHead>
                                 <TableHead className="text-right text-gray-400 font-medium">Total Return</TableHead>
-                                <TableHead className="text-center text-gray-400 font-medium">Score</TableHead>
                                 <TableHead className="w-[50px]"></TableHead>
                             </TableRow>
                         </TableHeader>
@@ -101,21 +100,6 @@ export function CollectionTable({ data, onDelete }: CollectionTableProps) {
                                                     {isPositive ? '+' : ''}{formatCurrency(diff)}
                                                 </span>
                                             </div>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            {item.nexfolioScore != null ? (
-                                                <span className={`inline-flex items-center justify-center min-w-[2.5rem] px-2 py-0.5 rounded text-xs font-bold border ${
-                                                    item.nexfolioScore >= 70
-                                                        ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                                                        : item.nexfolioScore >= 40
-                                                        ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-                                                        : 'text-red-400 bg-red-500/10 border-red-500/20'
-                                                }`}>
-                                                    {item.nexfolioScore}
-                                                </span>
-                                            ) : (
-                                                <span className="text-gray-600 text-xs">—</span>
-                                            )}
                                         </TableCell>
                                         <TableCell className="text-right pr-4">
                                             <button
