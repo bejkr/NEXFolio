@@ -1,6 +1,6 @@
 import React from 'react';
 import { PremiumButton } from './PremiumButton';
-import { Mail, Github, Twitter, Instagram } from 'lucide-react';
+import { Mail } from 'lucide-react';
 import Link from 'next/link';
 import { ScrollReveal } from './ScrollReveal';
 
@@ -21,7 +21,7 @@ export const CTASection: React.FC = () => {
                     
                     <ScrollReveal delay={0.2}>
                         <p className="text-xl text-gray-400 mb-12 max-w-xl mx-auto">
-                            Join 12,000+ collectors who are already saving time and making smarter decisions with NexFolio.
+                            Stop updating spreadsheets manually. Let Nexfolio track your collection value automatically.
                         </p>
                     </ScrollReveal>
                     
@@ -43,72 +43,50 @@ export const CTASection: React.FC = () => {
 
 export const LandingFooter: React.FC = () => {
     const currentYear = new Date().getFullYear();
-    
+
     return (
-        <footer className="pt-24 pb-12 border-t border-white/5 bg-black/40">
+        <footer className="pt-16 pb-10 border-t border-white/5 bg-black/40">
             <div className="container mx-auto px-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-                    <div className="col-span-1 md:col-span-1">
-                        <div className="flex items-center gap-2 mb-6">
-                            <img src="/Logo.png" alt="Nexfolio Logo" className="h-10 w-auto max-w-[140px] object-contain shrink-0" />
-                        </div>
-                        <p className="text-gray-500 text-sm leading-relaxed mb-6">
-                            The professional standard for collectible tracking. Automated, accurate, and powerful.
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+
+                    {/* Brand */}
+                    <div>
+                        <img src="/Logo.png" alt="Nexfolio Logo" className="h-10 w-auto max-w-[140px] object-contain shrink-0 mb-4" />
+                        <p className="text-gray-500 text-sm leading-relaxed">
+                            Portfolio analytics for TCG collectors. Automated, accurate, and built for serious investors.
                         </p>
-                        <div className="flex gap-4">
-                            <Link href="#" className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-[#00E599] transition-all">
-                                <Twitter className="w-5 h-5" />
-                            </Link>
-                            <Link href="#" className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-[#00E599] transition-all">
-                                <Instagram className="w-5 h-5" />
-                            </Link>
-                            <Link href="#" className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-[#00E599] transition-all">
-                                <Github className="w-5 h-5" />
-                            </Link>
-                        </div>
                     </div>
 
+                    {/* Platform */}
                     <div>
-                        <h4 className="text-white font-bold mb-6">Product</h4>
-                        <ul className="space-y-4 text-gray-500 text-sm">
+                        <h4 className="text-white font-semibold mb-5 text-sm uppercase tracking-wider">Platform</h4>
+                        <ul className="space-y-3 text-gray-500 text-sm">
                             <li><Link href="#features" className="hover:text-white transition-colors">Features</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Pricing</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">API</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Integrations</Link></li>
+                            <li><Link href="#how-it-works" className="hover:text-white transition-colors">How it works</Link></li>
+                            <li><Link href="/market" className="hover:text-white transition-colors">Market</Link></li>
+                            <li><Link href="/products" className="hover:text-white transition-colors">Products database</Link></li>
                         </ul>
                     </div>
 
+                    {/* Account */}
                     <div>
-                        <h4 className="text-white font-bold mb-6">Resources</h4>
-                        <ul className="space-y-4 text-gray-500 text-sm">
-                            <li><Link href="#" className="hover:text-white transition-colors">Documentation</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Market Reports</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Blog</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Guides</Link></li>
-                        </ul>
-                    </div>
-
-                    <div>
-                        <h4 className="text-white font-bold mb-6">Legal</h4>
-                        <ul className="space-y-4 text-gray-500 text-sm">
-                            <li><Link href="#" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Terms of Service</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Cookie Policy</Link></li>
-                            <li><Link href="#" className="hover:text-white transition-colors">Consent</Link></li>
+                        <h4 className="text-white font-semibold mb-5 text-sm uppercase tracking-wider">Account</h4>
+                        <ul className="space-y-3 text-gray-500 text-sm">
+                            <li><Link href="/register" className="hover:text-white transition-colors">Create account</Link></li>
+                            <li><Link href="/login" className="hover:text-white transition-colors">Log in</Link></li>
+                            <li><Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link></li>
                         </ul>
                     </div>
                 </div>
 
                 <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
                     <p className="text-gray-600 text-xs text-center md:text-left">
-                        © {currentYear} NexFolio. All rights reserved. Built with ❤️ for the collecting community.
+                        © {currentYear} Nexfolio. All rights reserved.
                     </p>
-                    <div className="flex items-center gap-6">
-                        <Link href="mailto:hello@nexfolio.com" className="flex items-center gap-2 text-gray-600 hover:text-white transition-colors text-xs">
-                            <Mail className="w-4 h-4" />
-                            <span>hello@nexfolio.com</span>
-                        </Link>
-                    </div>
+                    <Link href="mailto:hello@nexfolio.com" className="flex items-center gap-2 text-gray-600 hover:text-white transition-colors text-xs">
+                        <Mail className="w-4 h-4" />
+                        <span>hello@nexfolio.com</span>
+                    </Link>
                 </div>
             </div>
         </footer>
