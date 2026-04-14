@@ -42,8 +42,8 @@ export interface TopMover {
     name: string;
     category: 'Sealed' | 'Graded' | 'Raw';
     currentValue: number;
-    change30D: number;
-    change12M: number;
+    change30D: number | null;
+    change12M: number | null;
     liquidityScore: number;
     imageUrl?: string;
     productId?: string;
@@ -124,12 +124,13 @@ export interface MarketAsset {
     id: string;
     name: string;
     category: 'Sealed' | 'Graded' | 'Raw';
-    change30D: number;
-    change12M: number;
+    change30D: number | null;
+    change12M: number | null;
     liquidityScore: number;
     activeListings: number;
-    sold7D: number;
-    sellThroughRate: number;
+    price?: number | null;
+    sold7D?: number;
+    sellThroughRate?: number;
 }
 
 export const mockMarketGainers: MarketAsset[] = [];

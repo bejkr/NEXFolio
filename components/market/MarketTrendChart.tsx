@@ -13,8 +13,10 @@ export function MarketTrendChart({ data }: Props) {
     const [timeframe, setTimeframe] = useState('12M');
     const timeframes = ['1M', '3M', '6M', '12M'];
 
-    // For mock purposes, just slicing the data. In reality, you'd fetch filtered data.
-    const filteredData = timeframe === '12M' ? data : data.slice(-Math.max(3, parseInt(timeframe.replace('M', ''))));
+    // Slice to the last N months based on timeframe (data is monthly buckets)
+    const monthsMap: Record<string, number> = { '1M': 1, '3M': 3, '6M': 6, '12M': 12 };
+    const months = monthsMap[timeframe] ?? 12;
+    const filteredData = data.slice(-months);
 
     return (
         <Card className="bg-[#0E1116] border-[rgba(255,255,255,0.06)] h-full flex flex-col">
@@ -40,7 +42,7 @@ export function MarketTrendChart({ data }: Props) {
             </CardHeader>
             <CardContent className="flex-1 min-h-[300px] p-0 pb-6 pl-0">
                 <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 0 }}>
+                    <LineChart data={filteredData} margin={{ top: 5, right: 30, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorSealed" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="#00E599" stopOpacity={0.3} />
