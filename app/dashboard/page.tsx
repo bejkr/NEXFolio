@@ -18,6 +18,8 @@ import {
 
 import { DashboardHeader } from '@/components/DashboardHeader';
 import { PortfolioMoversCards } from '@/components/PortfolioMoversCards';
+import { PortfolioSignals, PortfolioSignal } from '@/components/PortfolioSignals';
+import { calculateNexfolioScore, calculatePriceChange } from '@/lib/scoring';
 
 export const metadata: Metadata = {
     title: 'Dashboard | Nexfolio',
@@ -191,7 +193,106 @@ export default async function DashboardPage() {
             : "No data available. Start adding assets to your portfolio."
     };
 
-    // 6. Market Snapshot — real data from all products in DB
+    // 6. Portfolio Signals — derived from existing data, no extra DB queries
+    const rawSignals: PortfolioSignal[] = [];
+
+    for (const asset of assets) {
+        const price   = asset.product?.price ?? asset.currentValue;
+        const qty     = asset.quantity || 1;
+        const cost    = asset.costBasis * qty;
+        const value   = price * qty;
+        const pnlPct  = cost > 0 ? ((value - cost) / cost) * 100 : 0;
+        const ph      = historyByProduct[asset.productId] || [];
+        const ch30    = calculatePriceChange(ph, 30);
+        const ch12M   = calculatePriceChange(ph, 365);
+        const score   = calculateNexfolioScore(
+            { id: asset.productId, price, availabilityCount: asset.product?.availabilityCount ?? null },
+            ph
+        );
+        const href    = asset.productId ? `/products/db_${asset.productId}` : undefined;
+        const tag     = asset.name as string;
+
+        // Take Profit
+        if (pnlPct > 80) {
+            rawSignals.push({
+                id: `profit-high-${asset.id}`,
+                kind: 'profit', priority: 1,
+                title: 'Take Profit',
+                body: `Up ${pnlPct.toFixed(0)}% since purchase — consider locking in gains.`,
+                tag, href,
+            });
+        } else if (pnlPct > 40) {
+            rawSignals.push({
+                id: `profit-med-${asset.id}`,
+                kind: 'profit', priority: 2,
+                title: 'Consider Rebalancing',
+                body: `+${pnlPct.toFixed(0)}% gain — position may be oversized.`,
+                tag, href,
+            });
+        }
+
+        // Declining 30D
+        if (ch30 != null && ch30 < -10) {
+            rawSignals.push({
+                id: `decline-${asset.id}`,
+                kind: 'risk', priority: ch30 < -20 ? 1 : 2,
+                title: 'Price Declining',
+                body: `${ch30.toFixed(1)}% over 30 days — review your position.`,
+                tag, href,
+            });
+        }
+
+        // Strong Momentum 30D
+        if (ch30 != null && ch30 > 15) {
+            rawSignals.push({
+                id: `momentum-${asset.id}`,
+                kind: 'momentum', priority: 3,
+                title: 'Strong Momentum',
+                body: `+${ch30.toFixed(1)}% in 30 days — watch for continuation.`,
+                tag, href,
+            });
+        }
+
+        // Long-term underperformer
+        if (ch12M != null && ch12M < -20) {
+            rawSignals.push({
+                id: `under-${asset.id}`,
+                kind: 'warn', priority: 2,
+                title: 'Long-term Underperformer',
+                body: `${ch12M.toFixed(0)}% over 12 months — may be worth reconsidering.`,
+                tag, href,
+            });
+        }
+
+        // High Nexfolio Score
+        if (score >= 75) {
+            rawSignals.push({
+                id: `score-${asset.id}`,
+                kind: 'info', priority: 3,
+                title: 'High Nexfolio Score',
+                body: `Score ${score}/100 — strong scarcity and momentum fundamentals.`,
+                tag, href,
+            });
+        }
+    }
+
+    // Concentration Risk (portfolio-level)
+    const sortedAlloc = [...allocationData].sort((a, b) => b.value - a.value);
+    if (sortedAlloc.length > 0 && sortedAlloc[0].value > 55) {
+        rawSignals.push({
+            id: 'concentration',
+            kind: 'warn', priority: 1,
+            title: 'Concentration Risk',
+            body: `${sortedAlloc[0].name} makes up ${sortedAlloc[0].value}% of your portfolio — consider diversifying.`,
+        });
+    }
+
+    // Sort: priority asc, then deduplicate (keep one per asset for profit/decline)
+    const signals = rawSignals
+        .sort((a, b) => a.priority - b.priority)
+        .slice(0, 6);
+
+    // 7. Market Snapshot — real data from all products in DB
     // Sealed index: avg 12M price change across all sealed products with history
     const [sealedProducts, avgListingsAgg] = await Promise.all([
         prisma.product.findMany({
@@ -255,12 +356,19 @@ export default async function DashboardPage() {
                     <SummaryCards data={portfolioSummary} />
                 </div>
 
-                {/* 3. Portfolio Movers Cards */}
+                {/* 3. Portfolio Signals */}
+                {assets.length > 0 && (
+                    <div className="col-span-12">
+                        <PortfolioSignals signals={signals} />
+                    </div>
+                )}
+
+                {/* 4. Portfolio Movers Cards */}
                 <div className="col-span-12">
                     <PortfolioMoversCards data={topMovers} />
                 </div>
 
-                {/* 4. Portfolio Allocation + Risk Snapshot */}
+                {/* 5. Portfolio Allocation + Risk Snapshot */}
                 <div className="col-span-12 lg:col-span-8">
                     <PortfolioAllocation data={allocationData} />
                 </div>
