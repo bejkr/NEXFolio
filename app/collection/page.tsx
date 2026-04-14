@@ -10,10 +10,11 @@ import { AddItemModal } from '@/components/collection/AddItemModal';
 import { CollectionItem } from '@/lib/mockData';
 import { Loader2, Package, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { WatchlistTab } from '@/components/WatchlistTab';
+import { PortfolioSignalsTab } from '@/components/PortfolioSignalsTab';
 import { useWatchlistHits } from '@/context/WatchlistHitsContext';
 import { Pagination } from '@/components/ui/Pagination';
 
-type Tab = 'portfolio' | 'reports' | 'watchlist';
+type Tab = 'portfolio' | 'reports' | 'watchlist' | 'signals';
 
 export default function CollectionPage() {
     const [tab, setTab] = useState<Tab>('portfolio');
@@ -160,7 +161,7 @@ export default function CollectionPage() {
 
             {/* ── Tab bar ── */}
             <div className="flex border-b border-[rgba(255,255,255,0.06)] mb-6">
-                {([['portfolio', 'Collection'], ['reports', 'P&L Reports'], ['watchlist', 'Watchlist']] as [Tab, string][]).map(([key, label]) => (
+                {([['portfolio', 'Collection'], ['reports', 'P&L Reports'], ['watchlist', 'Watchlist'], ['signals', 'Signals']] as [Tab, string][]).map(([key, label]) => (
                     <button
                         key={key}
                         onClick={() => setTab(key)}
@@ -320,6 +321,9 @@ export default function CollectionPage() {
 
             {/* ── Watchlist tab ── */}
             {tab === 'watchlist' && <WatchlistTab />}
+
+            {/* ── Signals tab ── */}
+            {tab === 'signals' && <PortfolioSignalsTab />}
 
             <AddItemModal
                 isOpen={isAddModalOpen}
