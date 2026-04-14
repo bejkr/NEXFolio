@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, PlusCircle, LayoutDashboard, ArrowRight } from 'lucide-react';
+import { Search, PlusCircle, LayoutDashboard, ArrowRight, ChevronRight } from 'lucide-react';
 import { ScrollReveal } from './ScrollReveal';
 import Link from 'next/link';
 
@@ -62,19 +62,11 @@ export const HowItWorks: React.FC = () => {
 
                 {/* Steps */}
                 <div className="relative max-w-5xl mx-auto">
-
-                    {/* Connector line (desktop) */}
-                    <div className="hidden md:block absolute top-[3.25rem] left-[calc(16.666%+2rem)] right-[calc(16.666%+2rem)] h-px bg-gradient-to-r from-[#00E599]/30 via-blue-500/30 to-violet-500/30 z-0" />
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {steps.map((step, i) => (
-                            <ScrollReveal
-                                key={i}
-                                delay={0.2 + i * 0.15}
-                                direction="up"
-                                height="100%"
-                            >
-                                <div className="relative flex flex-col h-full group">
+                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr] items-start">
+                    {steps.map((step, i) => (
+                        <React.Fragment key={i}>
+                            <ScrollReveal delay={0.2 + i * 0.15} direction="up" height="100%">
+                                <div className="relative flex flex-col h-full group px-2">
 
                                     {/* Step number — background decoration */}
                                     <span className={`absolute -top-2 right-4 text-[7rem] font-black leading-none select-none pointer-events-none ${step.numColor} transition-all duration-500 group-hover:scale-110`}>
@@ -90,14 +82,9 @@ export const HowItWorks: React.FC = () => {
                                     <div className={`relative z-10 flex-1 p-6 rounded-2xl bg-gradient-to-b ${step.color} border ${step.border} backdrop-blur-sm`}>
                                         <h3 className="text-xl font-bold text-white mb-3">{step.title}</h3>
                                         <p className="text-gray-400 text-sm leading-relaxed mb-5">{step.description}</p>
-
-                                        {/* Feature chips */}
                                         <div className="flex flex-wrap gap-2">
                                             {step.chips.map(chip => (
-                                                <span
-                                                    key={chip}
-                                                    className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-gray-400"
-                                                >
+                                                <span key={chip} className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-gray-400">
                                                     {chip}
                                                 </span>
                                             ))}
@@ -105,7 +92,15 @@ export const HowItWorks: React.FC = () => {
                                     </div>
                                 </div>
                             </ScrollReveal>
-                        ))}
+
+                            {/* Arrow between steps — desktop only */}
+                            {i < steps.length - 1 && (
+                                <div className="hidden md:flex items-start justify-center pt-[1.625rem] px-1">
+                                    <ChevronRight className="w-5 h-5 text-white/15" />
+                                </div>
+                            )}
+                        </React.Fragment>
+                    ))}
                     </div>
                 </div>
 
