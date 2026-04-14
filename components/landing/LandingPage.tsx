@@ -8,6 +8,7 @@ import { HowItWorks } from './HowItWorks';
 import { FeaturesGrid } from './FeaturesGrid';
 import { InsightsSection, SocialProof } from './SocialProof';
 import { Pricing } from './Pricing';
+import { ProductMarquee } from './ProductMarquee';
 import { CTASection, LandingFooter } from './LandingFooter';
 import { ScrollReveal } from './ScrollReveal';
 
@@ -23,6 +24,7 @@ export default function LandingPage() {
             <LandingHeader />
             <main className="relative z-10">
                 <Hero />
+                <ProductMarquee />
                 <div id="how-it-works">
                     <HowItWorks />
                 </div>
