@@ -93,6 +93,7 @@ export interface CollectionItem {
     quantity: number;
     productId?: string | null;
     product?: any | null;
+    nexfolioScore?: number;
 }
 
 export const mockCollectionData: CollectionItem[] = [];
