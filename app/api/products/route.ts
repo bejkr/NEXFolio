@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
                 return {
                     ...p,
                     nexfolioScore: 50,
-                    change30D: 0
+                    change30D: null
                 };
             }
         });
@@ -108,7 +108,6 @@ export async function GET(request: NextRequest) {
         });
 
         const totalNum = Number(total);
-        console.log('[products API] total:', totalNum, 'page:', page, 'pageSize:', PAGE_SIZE, 'products:', products.length);
         return NextResponse.json({
             products: productsWithMetrics,
             total: totalNum,

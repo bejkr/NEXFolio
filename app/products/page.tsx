@@ -70,8 +70,6 @@ export default function ProductsPage() {
         return () => clearTimeout(timeoutId);
     }, [searchQuery, expansionFilter, yearFilter, sortFilter, page]);
 
-    // Metrics are now provided by the API
-
     return (
         <div className="p-6 lg:p-8 max-w-[1600px] mx-auto h-[calc(100vh-64px)] flex flex-col">
             <div className="mb-6 shrink-0">
@@ -190,7 +188,7 @@ export default function ProductsPage() {
                                     </TableRow>
                                 ) : (
                                     products.map((product) => {
-                                        const change30D = product.change30D || 0;
+                                        const change30D: number | null = product.change30D ?? null;
                                         const score = product.nexfolioScore || 50;
                                         return (
                                             <TableRow
@@ -237,9 +235,13 @@ export default function ProductsPage() {
                                                 </TableCell>
 
                                                 <TableCell className="py-4 text-right">
-                                                    <div className={`text-sm font-medium ${change30D >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                        {change30D > 0 ? '+' : ''}{change30D.toFixed(1)}%
-                                                    </div>
+                                                    {change30D == null ? (
+                                                        <span className="text-sm text-gray-600">—</span>
+                                                    ) : (
+                                                        <div className={`text-sm font-medium ${change30D >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                            {change30D > 0 ? '+' : ''}{change30D.toFixed(1)}%
+                                                        </div>
+                                                    )}
                                                 </TableCell>
 
                                                 <TableCell className="py-4 text-right">
@@ -271,8 +273,6 @@ export default function ProductsPage() {
                     </div>
                 </Card>
             </div>
-        </div >
-
+        </div>
     );
 }
-

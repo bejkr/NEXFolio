@@ -39,6 +39,7 @@ model Product {
   updatedAt         DateTime  @updatedAt
   userAssets        UserAsset[]
   priceHistory      PriceHistory[]
+  watchlistItems    WatchlistItem[]
 }
 
 model UserAsset {
@@ -84,4 +85,16 @@ model Alert {
 
   @@index([userId])
   @@index([createdAt])
+}
+
+model WatchlistItem {
+  id          String   @id @default(uuid())
+  userId      String
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  targetPrice Float?
+  addedAt     DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([userId])
 }

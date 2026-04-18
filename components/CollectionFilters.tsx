@@ -1,6 +1,12 @@
 'use client';
 
-import { Search, LayoutGrid, List } from 'lucide-react';
+import { Search, LayoutGrid, List, ArrowUpDown } from 'lucide-react';
+
+export type SortOption =
+    | 'value_desc' | 'value_asc'
+    | 'profit_desc' | 'profit_asc'
+    | 'date_desc' | 'date_asc'
+    | 'name_asc' | 'name_desc';
 
 interface CollectionFiltersProps {
     searchQuery: string;
@@ -9,6 +15,8 @@ interface CollectionFiltersProps {
     setActiveCategory: (category: string) => void;
     viewMode: 'list' | 'grid';
     setViewMode: (mode: 'list' | 'grid') => void;
+    sortBy: SortOption;
+    setSortBy: (sort: SortOption) => void;
 }
 
 export function CollectionFilters({
@@ -17,7 +25,9 @@ export function CollectionFilters({
     activeCategory,
     setActiveCategory,
     viewMode,
-    setViewMode
+    setViewMode,
+    sortBy,
+    setSortBy,
 }: CollectionFiltersProps) {
     const categories = ['All', 'Sealed', 'Graded', 'Raw'];
 
@@ -39,7 +49,35 @@ export function CollectionFilters({
             </div>
 
             <div className="flex items-center gap-3 w-full sm:w-auto">
-                <div className="relative flex-1 sm:w-72">
+                {/* Sort dropdown */}
+                <div className="relative">
+                    <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 pointer-events-none" />
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as SortOption)}
+                        className="bg-[#151A21] border border-[rgba(255,255,255,0.06)] rounded-lg pl-8 pr-8 py-2 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary appearance-none cursor-pointer"
+                    >
+                        <optgroup label="Value">
+                            <option value="value_desc">Value ↓</option>
+                            <option value="value_asc">Value ↑</option>
+                        </optgroup>
+                        <optgroup label="Profit">
+                            <option value="profit_desc">Profit ↓</option>
+                            <option value="profit_asc">Profit ↑</option>
+                        </optgroup>
+                        <optgroup label="Date Added">
+                            <option value="date_desc">Newest First</option>
+                            <option value="date_asc">Oldest First</option>
+                        </optgroup>
+                        <optgroup label="Name">
+                            <option value="name_asc">Name A→Z</option>
+                            <option value="name_desc">Name Z→A</option>
+                        </optgroup>
+                    </select>
+                </div>
+
+                {/* Search */}
+                <div className="relative flex-1 sm:w-64">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                     <input
                         type="text"
@@ -50,6 +88,7 @@ export function CollectionFilters({
                     />
                 </div>
 
+                {/* View toggle */}
                 <div className="flex items-center space-x-1 border border-[rgba(255,255,255,0.06)] rounded-lg p-1 bg-[#151A21]">
                     <button
                         onClick={() => setViewMode('list')}

@@ -42,8 +42,8 @@ export interface TopMover {
     name: string;
     category: 'Sealed' | 'Graded' | 'Raw';
     currentValue: number;
-    change30D: number;
-    change12M: number;
+    change30D: number | null;
+    change12M: number | null;
     liquidityScore: number;
     imageUrl?: string;
     productId?: string;
@@ -98,8 +98,9 @@ export interface CollectionItem {
 export const mockCollectionData: CollectionItem[] = [];
 
 export interface MarketOverviewData {
-    sealedAvgPrice: number;    // avg current price across all tracked products
-    sealedIndex12M: number;    // avg 12M price change %
+    sealedAvgPrice?: number;   // avg current price across all tracked products (optional)
+    sealedIndex12M: number;    // avg 12M price change % for sealed products
+    gradedIndex12M?: number;   // avg 12M price change % for graded products (optional)
     averageLiquidity: number;  // avg listings count (normalized 0-100)
     marketVolatility: number;  // daily volatility %
 }
@@ -107,6 +108,7 @@ export interface MarketOverviewData {
 export const mockMarketOverview: MarketOverviewData = {
     sealedAvgPrice: 0,
     sealedIndex12M: 0,
+    gradedIndex12M: 0,
     averageLiquidity: 0,
     marketVolatility: 0,
 };
@@ -124,10 +126,11 @@ export interface MarketAsset {
     id: string;
     name: string;
     category: 'Sealed' | 'Graded' | 'Raw';
-    change30D: number;
-    change12M: number;
+    change30D: number | null;
+    change12M: number | null;
     liquidityScore: number;
     activeListings: number;
+    price?: number | null;
     sold7D?: number;          // optional — not available from Cardmarket scrape
     sellThroughRate?: number; // optional — not available from Cardmarket scrape
 }

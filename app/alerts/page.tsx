@@ -1,137 +1,124 @@
 'use client';
 
-import { Bell, TrendingUp, Info, AlertTriangle, Check, Clock, Trash2 } from 'lucide-react';
-import { useNotifications } from '@/context/NotificationContext';
-import { useState } from 'react';
-import { format } from 'date-fns';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Bell, Target, Package, RefreshCw, ExternalLink } from 'lucide-react';
+import { useWatchlistHits } from '@/context/WatchlistHitsContext';
 
 export default function AlertsPage() {
-    const { alerts, markAsRead, deleteAlert, markAllAsRead } = useNotifications();
-    const [activeTab, setActiveTab] = useState<'all' | 'price' | 'system' | 'availability'>('all');
+    const router = useRouter();
+    const { hits, totalAlerts, loading, refresh } = useWatchlistHits();
 
-    const filteredAlerts = alerts.filter(alert =>
-        activeTab === 'all' ? true : alert.type === activeTab
-    );
+    // Refresh when page is opened
+    useEffect(() => { refresh(); }, []);
 
-    const getIcon = (type: string) => {
-        switch (type) {
-            case 'price': return <TrendingUp className="h-5 w-5 text-[#00E599]" />;
-            case 'system': return <Info className="h-5 w-5 text-blue-400" />;
-            case 'availability': return <AlertTriangle className="h-5 w-5 text-orange-400" />;
-            default: return <Bell className="h-5 w-5 text-gray-400" />;
-        }
-    };
+    const fmtPrice = (v: number | null) =>
+        v == null ? '—' : `€${v.toLocaleString('en-IE', { minimumFractionDigits: 2 })}`;
 
-    const getSeverityStyles = (severity: string) => {
-        switch (severity) {
-            case 'critical': return 'border-l-4 border-red-500 bg-red-500/5';
-            case 'warning': return 'border-l-4 border-orange-500 bg-orange-500/5';
-            case 'info': return 'border-l-4 border-[#00E599] bg-[#00E599]/5';
-            default: return 'border-l-4 border-gray-600';
-        }
-    };
-
-    const formatTime = (dateStr: string) => {
-        try {
-            return format(new Date(dateStr), 'MMM d, HH:mm');
-        } catch (e) {
-            return dateStr;
-        }
-    };
+    const pctBelow = (price: number, target: number) =>
+        (((target - price) / target) * 100).toFixed(1);
 
     return (
-        <div className="p-6 md:p-8 max-w-5xl mx-auto w-full">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div className="p-6 md:p-8 max-w-4xl mx-auto w-full space-y-8">
+
+            {/* Header */}
+            <div className="flex items-start justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Alerts & Notifications</h1>
-                    <p className="text-sm text-gray-400">Stay updated on price changes, stock availability, and system updates.</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-white">Alerts</h1>
+                    <p className="text-sm text-gray-400 mt-1">
+                        Price alerts from your Watchlist. Set target prices in{' '}
+                        <button onClick={() => router.push('/collection')} className="text-primary hover:underline">
+                            Portfolio → Watchlist
+                        </button>.
+                    </p>
                 </div>
-                <div className="flex items-center space-x-3">
-                    <button
-                        onClick={markAllAsRead}
-                        className="text-xs font-semibold text-gray-400 hover:text-white transition-colors"
-                    >
-                        Mark all as read
-                    </button>
-                </div>
+                <button
+                    onClick={refresh}
+                    disabled={loading}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white border border-white/10 hover:border-white/20 rounded-lg transition-colors"
+                >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline">Refresh</span>
+                </button>
             </div>
 
-            {/* Filter Tabs */}
-            <div className="flex items-center space-x-1 mb-6 border-b border-[rgba(255,255,255,0.06)] overflow-x-auto pb-px scrollbar-hide">
-                {(['all', 'price', 'availability', 'system'] as const).map((tab) => (
+            {totalAlerts === 0 && !loading ? (
+                /* Empty state */
+                <div className="flex flex-col items-center justify-center py-24 text-center border-2 border-dashed border-white/5 rounded-2xl">
+                    <div className="w-16 h-16 rounded-full bg-[#151A21] flex items-center justify-center mb-5 border border-white/5">
+                        <Bell className="w-7 h-7 text-gray-600" />
+                    </div>
+                    <h3 className="text-white font-semibold text-lg mb-2">No active alerts</h3>
+                    <p className="text-sm text-gray-500 max-w-sm mb-6">
+                        Add products to your Watchlist and set a target price — you'll see alerts here when the price gets close or hits your target.
+                    </p>
                     <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`px-4 py-2 text-sm font-medium transition-all relative capitalize ${activeTab === tab ? 'text-[#00E599]' : 'text-gray-500 hover:text-gray-300'
-                            }`}
+                        onClick={() => router.push('/collection')}
+                        className="px-5 py-2 bg-primary/10 text-primary border border-primary/20 rounded-lg text-sm font-medium hover:bg-primary/20 transition-colors"
                     >
-                        {tab}
-                        {activeTab === tab && (
-                            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00E599] shadow-[0_0_8px_rgba(0,229,153,0.5)]"></div>
-                        )}
+                        Open Watchlist →
                     </button>
-                ))}
-            </div>
+                </div>
+            ) : (
+                <div className="space-y-6">
 
-            {/* Alerts List */}
-            <div className="space-y-4">
-                {filteredAlerts.length > 0 ? (
-                    filteredAlerts.map((alert) => (
-                        <div
-                            key={alert.id}
-                            className={`group rounded-xl border border-[rgba(255,255,255,0.06)] bg-[#151A21]/50 backdrop-blur-sm transition-all hover:bg-[#151A21] overflow-hidden ${getSeverityStyles(alert.severity)} ${!alert.read ? 'ring-1 ring-[#00E599]/20 shadow-[0_0_15px_rgba(0,229,153,0.05)]' : 'opacity-80'}`}
-                        >
-                            <div className="p-4 flex items-start">
-                                <div className={`p-2 rounded-lg bg-[#0E1116] border border-[rgba(255,255,255,0.06)] mr-4 mt-0.5 group-hover:scale-110 transition-transform`}>
-                                    {getIcon(alert.type)}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <h3 className={`font-bold truncate pr-4 ${!alert.read ? 'text-white' : 'text-gray-300'}`}>
-                                            {alert.title}
-                                            {!alert.read && <span className="ml-2 inline-block h-1.5 w-1.5 rounded-full bg-[#00E599] animate-pulse"></span>}
-                                        </h3>
-                                        <div className="flex items-center space-x-1 shrink-0">
-                                            <span className="text-[11px] font-medium text-gray-500 flex items-center mr-2">
-                                                <Clock className="h-3 w-3 mr-1" />
-                                                {formatTime(alert.timestamp)}
+                    {/* 🎯 Target Hit */}
+                    {hits.length > 0 && (
+                        <section>
+                            <div className="flex items-center gap-2 mb-3">
+                                <Target className="w-4 h-4 text-emerald-400" />
+                                <h2 className="text-sm font-bold text-emerald-400 uppercase tracking-wider">
+                                    Target Reached — {hits.length} item{hits.length !== 1 ? 's' : ''}
+                                </h2>
+                            </div>
+                            <div className="space-y-3">
+                                {hits.map(item => (
+                                    <div
+                                        key={item.id}
+                                        className="flex items-center gap-4 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20 hover:bg-emerald-500/10 transition-colors cursor-pointer group"
+                                        onClick={() => router.push(`/products/db_${item.productId}`)}
+                                    >
+                                        <div className="w-12 h-12 rounded-lg bg-[#151A21] border border-white/5 flex items-center justify-center shrink-0 overflow-hidden">
+                                            {item.imageUrl ? (
+                                                <img src={`/api/proxy-image?url=${encodeURIComponent(item.imageUrl)}`} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Package className="w-5 h-5 text-gray-600" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <span className="text-white font-semibold truncate">{item.name}</span>
+                                                <ExternalLink className="w-3 h-3 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                                            </div>
+                                            <p className="text-xs text-gray-500">{item.expansion}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <div className="flex items-center gap-2 justify-end">
+                                                <span className="text-emerald-400 font-bold text-sm">
+                                                    {fmtPrice(item.price)}
+                                                </span>
+                                                <span className="text-xs text-gray-500">current</span>
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-0.5">
+                                                Target {fmtPrice(item.targetPrice)}{' '}
+                                                <span className="text-emerald-400 font-medium">
+                                                    (−{pctBelow(item.price!, item.targetPrice!)}% below)
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="shrink-0">
+                                            <span className="text-[10px] font-bold uppercase px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                                ✓ Hit
                                             </span>
-                                            <button
-                                                onClick={() => markAsRead(alert.id)}
-                                                disabled={alert.read}
-                                                className={`p-1.5 rounded-md transition-colors ${alert.read ? 'text-gray-700 cursor-not-allowed' : 'text-gray-500 hover:text-[#00E599] hover:bg-[#00E599]/10'}`}
-                                                title="Mark as read"
-                                            >
-                                                <Check className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => deleteAlert(alert.id)}
-                                                className="p-1.5 rounded-md text-gray-500 hover:text-red-500 hover:bg-red-500/10 transition-colors"
-                                                title="Delete"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
                                         </div>
                                     </div>
-                                    <p className="text-sm text-gray-400 leading-relaxed max-w-3xl">
-                                        {alert.description}
-                                    </p>
-                                </div>
+                                ))}
                             </div>
-                        </div>
-                    ))
-                ) : (
-                    <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed border-[rgba(255,255,255,0.06)] rounded-2xl bg-[#151A21]/30">
-                        <div className="h-16 w-16 rounded-full bg-[#151A21] flex items-center justify-center mb-6 border border-[rgba(255,255,255,0.08)]">
-                            <Bell className="h-8 w-8 text-gray-600" />
-                        </div>
-                        <h3 className="text-xl font-bold text-white mb-2">No alerts found</h3>
-                        <p className="text-sm text-gray-400 max-w-xs mx-auto">
-                            You're all caught up! When new alerts arrive, they'll appear here.
-                        </p>
-                    </div>
-                )}
-            </div>
+                        </section>
+                    )}
+
+                </div>
+            )}
         </div>
     );
 }

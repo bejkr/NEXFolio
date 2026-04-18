@@ -13,12 +13,14 @@ export function TopMoversTable({ data }: TopMoversTableProps) {
     const formatCurrency = (val: number) =>
         new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(val);
 
-    const formatPercent = (val: number) => {
+    const formatPercent = (val: number | null) => {
+        if (val == null) return '—';
         const sign = val >= 0 ? '+' : '';
         return `${sign}${val.toFixed(2)}%`;
     };
 
-    const getPercentColor = (val: number) => {
+    const getPercentColor = (val: number | null) => {
+        if (val == null) return 'text-gray-500';
         return val >= 0 ? 'text-success-text' : 'text-danger-text';
     };
 

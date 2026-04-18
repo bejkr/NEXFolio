@@ -15,6 +15,7 @@ export function MarketTrendChart({ data, title = 'Market Trend Index', subtitle 
     const [timeframe, setTimeframe] = useState('12M');
     const timeframes = ['1M', '3M', '6M', '12M'];
 
+    // Slice to the last N months based on timeframe (data is monthly buckets)
     const sliceMap: Record<string, number> = { '1M': 1, '3M': 3, '6M': 6, '12M': 12 };
     const sliceCount = sliceMap[timeframe] ?? data.length;
     const filteredData = data.slice(-sliceCount);

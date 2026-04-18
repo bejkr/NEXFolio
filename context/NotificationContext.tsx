@@ -3,6 +3,24 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { Alert } from '@/lib/mockData';
 
+const READ_KEY = 'nexfolio_read_notifications';
+
+function getReadIds(): Set<string> {
+    if (typeof window === 'undefined') return new Set();
+    try {
+        const stored = localStorage.getItem(READ_KEY);
+        return stored ? new Set(JSON.parse(stored) as string[]) : new Set();
+    } catch {
+        return new Set();
+    }
+}
+
+function saveReadIds(ids: Set<string>) {
+    try {
+        localStorage.setItem(READ_KEY, JSON.stringify([...ids]));
+    } catch {}
+}
+
 interface NotificationContextType {
     alerts: Alert[];
     unreadCount: number;
