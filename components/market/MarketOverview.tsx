@@ -20,7 +20,7 @@ export function MarketOverview({ data }: Props) {
                         <div className="min-w-0">
                             <p className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wider">Avg. Product Price</p>
                             <h3 className="text-xl sm:text-2xl font-bold text-white mt-1.5 truncate">
-                                €{data.sealedAvgPrice > 0 ? data.sealedAvgPrice.toFixed(2) : '—'}
+                                €{data.sealedAvgPrice != null && data.sealedAvgPrice > 0 ? data.sealedAvgPrice.toFixed(2) : '—'}
                             </h3>
                         </div>
                         <div className="p-2 bg-[#00E599]/10 rounded-lg shrink-0">
