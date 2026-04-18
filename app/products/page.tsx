@@ -163,8 +163,8 @@ export default function ProductsPage() {
                 </Card>
 
                 {/* 2. Products Table */}
-                <Card className="flex-1 bg-[#0E1116] border-[rgba(255,255,255,0.06)] overflow-hidden flex flex-col h-full min-w-0">
-                    <div className="overflow-y-auto custom-scrollbar flex-1 relative min-h-0">
+                <Card className="flex-1 min-h-0 bg-[#0E1116] border-[rgba(255,255,255,0.06)] overflow-hidden flex flex-col min-w-0">
+                    <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0 relative">
                         {loading && (
                             <div className="absolute inset-0 bg-[#0E1116]/50 backdrop-blur-sm z-20 flex items-center justify-center">
                                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -260,7 +260,7 @@ export default function ProductsPage() {
                             </TableBody>
                         </Table>
                     </div>
-                    <div className="px-4 shrink-0">
+                    <div className="px-4 pb-3 shrink-0">
                         <Pagination
                             currentPage={page}
                             totalPages={totalPages}
@@ -270,8 +270,9 @@ export default function ProductsPage() {
                         />
                     </div>
                 </Card>
-            </div >
+            </div>
         </div >
+
     );
 }
 

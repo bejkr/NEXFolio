@@ -107,12 +107,14 @@ export async function GET(request: NextRequest) {
             }
         });
 
+        const totalNum = Number(total);
+        console.log('[products API] total:', totalNum, 'page:', page, 'pageSize:', PAGE_SIZE, 'products:', products.length);
         return NextResponse.json({
             products: productsWithMetrics,
-            total,
+            total: totalNum,
             page,
             pageSize: PAGE_SIZE,
-            totalPages: Math.ceil(total / PAGE_SIZE),
+            totalPages: Math.ceil(totalNum / PAGE_SIZE),
             filters: {
                 expansions: { main: mainSets, other: otherSets },
                 years: uniqueYears.map(y => y.releaseYear).filter(Boolean) as number[]
