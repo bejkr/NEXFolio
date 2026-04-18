@@ -113,8 +113,16 @@ export async function GET(request: NextRequest) {
         // Add the very last point (current value) if not already close
         const lastPoint = dataPoints[dataPoints.length - 1];
         if (lastPoint && new Date(lastPoint.month).getTime() < now.getTime()) {
-           let totalValueNow = assets.reduce((sum: number, asset: any) => sum + (asset.product?.price ?? asset.currentValue), 0);
-             dataPoints.push({
+            let totalValueNow = 0;
+            for (const asset of assets) {
+                // Use the most recent price history entry, fallback to product.price, then currentValue
+                const history = asset.product?.priceHistory || [];
+                const latestPrice = history.sort((a: any, b: any) =>
+                    new Date(b.date).getTime() - new Date(a.date).getTime()
+                )[0];
+                totalValueNow += latestPrice?.price ?? asset.product?.price ?? asset.currentValue ?? 0;
+            }
+            dataPoints.push({
                 month: now.toISOString(),
                 value: Number(totalValueNow.toFixed(2))
             });

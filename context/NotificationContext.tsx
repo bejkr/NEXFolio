@@ -3,6 +3,24 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { mockAlerts, Alert } from '@/lib/mockData';
 
+const READ_KEY = 'nexfolio_read_notifications';
+
+function getReadIds(): Set<string> {
+    if (typeof window === 'undefined') return new Set();
+    try {
+        const stored = localStorage.getItem(READ_KEY);
+        return stored ? new Set(JSON.parse(stored) as string[]) : new Set();
+    } catch {
+        return new Set();
+    }
+}
+
+function saveReadIds(ids: Set<string>) {
+    try {
+        localStorage.setItem(READ_KEY, JSON.stringify([...ids]));
+    } catch {}
+}
+
 interface NotificationContextType {
     alerts: Alert[];
     unreadCount: number;
@@ -18,18 +36,27 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const [alerts, setAlerts] = useState<Alert[]>([]);
 
     useEffect(() => {
-        // Initialize with mock data
-        setAlerts(mockAlerts);
+        // Merge mockAlerts with persisted read state from localStorage
+        const readIds = getReadIds();
+        setAlerts(mockAlerts.map(a => ({ ...a, read: readIds.has(a.id) ? true : a.read })));
     }, []);
 
     const unreadCount = alerts.filter(a => !a.read).length;
 
     const markAsRead = (id: string) => {
-        setAlerts(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
+        setAlerts(prev => {
+            const next = prev.map(a => a.id === id ? { ...a, read: true } : a);
+            saveReadIds(new Set(next.filter(a => a.read).map(a => a.id)));
+            return next;
+        });
     };
 
     const markAllAsRead = () => {
-        setAlerts(prev => prev.map(a => ({ ...a, read: true })));
+        setAlerts(prev => {
+            const next = prev.map(a => ({ ...a, read: true }));
+            saveReadIds(new Set(next.map(a => a.id)));
+            return next;
+        });
     };
 
     const deleteAlert = (id: string) => {

@@ -18,32 +18,36 @@ export interface ProductForScoring {
 
 /**
  * Calculates the percentage change in price over a given number of days.
+ * Returns null when history is too short to give a meaningful result
+ * (baseline entry must be at least 80% as old as the requested period).
  */
-export function calculatePriceChange(history: PriceHistoryItem[], days: number): number {
-  if (!history || history.length < 2) return 0;
+export function calculatePriceChange(history: PriceHistoryItem[], days: number): number | null {
+  if (!history || history.length < 2) return null;
 
   const now = new Date();
-  const targetDate = new Date(now.getTime() - (days * 24 * 60 * 60 * 1000));
+  const targetMs = now.getTime() - days * 24 * 60 * 60 * 1000;
+  // Baseline entry must be at least 80% of the requested period old
+  const minAgeMs = days * 0.8 * 24 * 60 * 60 * 1000;
 
-  // Sort history by date descending
   const sortedHistory = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  
   const latest = sortedHistory[0].price;
-  
-  // Find the entry closest to targetDate
-  let baseline = latest;
+
+  // Find the entry closest to targetDate that is old enough
+  let baseline: number | null = null;
   let minDiff = Infinity;
 
   for (const h of sortedHistory) {
-    const diff = Math.abs(new Date(h.date).getTime() - targetDate.getTime());
+    const entryMs = new Date(h.date).getTime();
+    const ageMs = now.getTime() - entryMs;
+    if (ageMs < minAgeMs) continue; // too recent — skip
+    const diff = Math.abs(entryMs - targetMs);
     if (diff < minDiff) {
       minDiff = diff;
       baseline = h.price;
     }
-    // If we passed the target date, we can stop if we want, but history is usually small
   }
 
-  if (baseline === 0) return 0;
+  if (baseline === null || baseline === 0) return null;
   return ((latest - baseline) / baseline) * 100;
 }
 
@@ -72,8 +76,8 @@ export function calculateNexfolioScore(product: ProductForScoring, history: Pric
     score += 5;
   }
 
-  // 2. MOMENTUM (40 pts)
-  const change30D = calculatePriceChange(history, 30);
+  // 2. MOMENTUM (40 pts) — null means insufficient history → neutral
+  const change30D = calculatePriceChange(history, 30) ?? 0;
   if (change30D >= 15) {
     score += 40;
   } else if (change30D >= 5) {

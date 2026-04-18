@@ -13,6 +13,14 @@ puppeteer.use(StealthPlugin());
 
 const BASE_URL = 'https://www.cardmarket.com/en/Pokemon';
 const CACHE_DIR = path.join(process.cwd(), '.cache', 'scraper');
+const PAGE_POOL_SIZE = 3;
+const COOKIES_FILE = path.join(process.cwd(), '.cardmarket-cookies.txt');
+
+const USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+];
 
 export interface Expansion {
     name: string;
@@ -32,114 +40,264 @@ export interface CategoryPageResult {
     hasNextPage: boolean;
 }
 
-// Global browser and page instances to reuse across requests
+// Page pool state
 let globalBrowser: Browser | null = null;
-let globalPage: any | null = null;
+let pagePool: any[] = [];
+let pageIdle: boolean[] = [];
+const pageWaiters: Array<() => void> = [];
+
+async function ensurePagePool(browser: Browser): Promise<void> {
+    while (pagePool.length < PAGE_POOL_SIZE) {
+        const page = await browser.newPage();
+        const ua = USER_AGENTS[pagePool.length % USER_AGENTS.length];
+        await page.setUserAgent(ua);
+        await page.setViewport({ width: 1920, height: 1080 });
+
+        // Inject CF clearance cookie if provided
+        const cfClearance = process.env.CF_CLEARANCE;
+        if (cfClearance) {
+            await page.setCookie({
+                name: 'cf_clearance',
+                value: cfClearance,
+                domain: '.cardmarket.com',
+                path: '/',
+                httpOnly: true,
+                secure: true,
+            });
+            logger.info('CF clearance cookie injected.');
+        }
+
+        pagePool.push(page);
+        pageIdle.push(true);
+    }
+}
+
+async function acquirePage(): Promise<{ page: any; index: number }> {
+    const idx = pageIdle.findIndex(idle => idle);
+    if (idx !== -1) {
+        pageIdle[idx] = false;
+        return { page: pagePool[idx], index: idx };
+    }
+    await new Promise<void>(resolve => pageWaiters.push(resolve));
+    return acquirePage();
+}
+
+function releasePage(index: number): void {
+    pageIdle[index] = true;
+    const next = pageWaiters.shift();
+    if (next) next();
+}
+
+/**
+ * Fetch HTML via plain axios + cookies (no Puppeteer, no CDP detection).
+ * Requires a cookie string from Brave browser.
+ */
+async function fetchHtmlWithCookies(url: string, cacheTTLMs: number = 0): Promise<string> {
+    // Check cache first
+    const cacheKey = Buffer.from(url).toString('base64').replace(/\//g, '-').replace(/\+/g, '_');
+    const cacheFile = path.join(CACHE_DIR, `${cacheKey}.html`);
+
+    if (fs.existsSync(cacheFile)) {
+        const stat = fs.statSync(cacheFile);
+        const age = Date.now() - stat.mtimeMs;
+        const expired = cacheTTLMs > 0 && age > cacheTTLMs;
+        if (!expired) {
+            const cached = fs.readFileSync(cacheFile, 'utf-8');
+            if (!cached.includes('Just a moment...')) return cached;
+        }
+        fs.unlinkSync(cacheFile);
+    }
+
+    // Load cookies from file or env
+    let cookieString = process.env.CM_COOKIES || '';
+    if (!cookieString && fs.existsSync(COOKIES_FILE)) {
+        cookieString = fs.readFileSync(COOKIES_FILE, 'utf-8').trim();
+    }
+    if (!cookieString) {
+        throw new Error('No Cardmarket cookies found. Run: npm run sync:cardmarket:cookies');
+    }
+
+    // Load User-Agent — must match the browser that generated the cookies
+    const UA_FILE = path.join(process.cwd(), '.cardmarket-ua.txt');
+    const userAgent = fs.existsSync(UA_FILE)
+        ? fs.readFileSync(UA_FILE, 'utf-8').trim()
+        : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36';
+
+    const scrapingBeeKey = process.env.SCRAPINGBEE_KEY;
+
+    let html: string;
+
+    if (scrapingBeeKey) {
+        logger.info(`Fetching via ScrapingBee: ${url}`);
+
+        const response = await axios.get('https://app.scrapingbee.com/api/v1', {
+            params: {
+                api_key: scrapingBeeKey,
+                url,
+                render_js: 'true', // Cardmarket prices are dynamically loaded via JS
+                premium_proxy: 'true',
+                country_code: 'de', // EU proxy for correct EUR prices
+            },
+            timeout: 60000,
+        });
+
+        html = response.data;
+    } else {
+        logger.info(`Fetching via native fetch: ${url}`);
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000);
+
+        const response = await fetch(url, {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': userAgent,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Cookie': cookieString,
+                'Referer': 'https://www.cardmarket.com/en/Pokemon',
+            },
+        });
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        html = await response.text();
+    }
+
+    if (html.includes('Just a moment...')) {
+        throw new Error('Cloudflare challenge detected — cookies may be expired. Refresh them from Brave.');
+    }
+
+    // Cache result
+    if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+    fs.writeFileSync(cacheFile, html);
+
+    return html;
+}
 
 export const cardmarketService = {
     async getBrowser(): Promise<Browser> {
         if (!globalBrowser) {
             logger.debug('Launching Puppeteer Stealth Browser...');
+
+            // Use Brave if available – CF trusts it more than headless Chromium
+            const bravePath = 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe';
+            const executablePath = fs.existsSync(bravePath) ? bravePath : undefined;
+            if (executablePath) {
+                logger.info('Using Brave browser for scraping.');
+            }
+
+            const braveUserDataDir = `C:\\Users\\${require('os').userInfo().username}\\AppData\\Local\\BraveSoftware\\Brave-Browser\\User Data`;
+            const useUserData = executablePath && fs.existsSync(braveUserDataDir) && process.env.BRAVE_PROFILE !== 'false';
+            if (useUserData) {
+                logger.info(`Using Brave profile from: ${braveUserDataDir}`);
+            }
+
             globalBrowser = await puppeteer.launch({
-                headless: process.env.PUPPETEER_HEADLESS !== 'false', 
+                headless: false, // visible window – CF trusts non-headless more
+                executablePath,
+                userDataDir: useUserData ? braveUserDataDir : undefined,
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
                     '--disable-blink-features=AutomationControlled',
-                    '--window-size=1920,1080'
+                    '--window-size=1920,1080',
+                    '--profile-directory=Default',
                 ]
             });
+            await ensurePagePool(globalBrowser);
         }
         return globalBrowser;
     },
 
-    async getPage(): Promise<any> {
-        const browser = await this.getBrowser();
-        if (!globalPage || globalPage.isClosed()) {
-            globalPage = await browser.newPage();
-            
-            const userAgents = [
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-            ];
-            const randomUA = userAgents[Math.floor(Math.random() * userAgents.length)];
-            
-            await globalPage.setUserAgent(randomUA);
-            await globalPage.setViewport({ width: 1920, height: 1080 });
-        }
-        return globalPage;
-    },
-
     async closeBrowser() {
         if (globalBrowser) {
+            for (const page of pagePool) {
+                try { await page.close(); } catch {}
+            }
+            pagePool = [];
+            pageIdle = [];
             await globalBrowser.close();
             globalBrowser = null;
-            globalPage = null;
             logger.debug('Puppeteer Browser closed.');
         }
     },
 
-    async fetchHtml(url: string, useCache: boolean = true): Promise<string> {
-        // Use a safe version of base64 for filenames (replace / and +)
+    async fetchHtml(url: string, useCache: boolean = true, cacheTTLMs: number = 0): Promise<string> {
         const cacheKey = Buffer.from(url).toString('base64').replace(/\//g, '-').replace(/\+/g, '_');
         const cacheFile = path.join(CACHE_DIR, `${cacheKey}.html`);
 
         if (useCache && process.env.ENABLE_SCRAPER_CACHE === 'true' && fs.existsSync(cacheFile)) {
-            const cachedContent = fs.readFileSync(cacheFile, 'utf-8');
-            if (!cachedContent.includes('Just a moment...')) {
-                return cachedContent;
-            } else {
-                fs.unlinkSync(cacheFile);
+            const stat = fs.statSync(cacheFile);
+            const age = Date.now() - stat.mtimeMs;
+            const expired = cacheTTLMs > 0 && age > cacheTTLMs;
+            if (!expired) {
+                const cachedContent = fs.readFileSync(cacheFile, 'utf-8');
+                if (!cachedContent.includes('Just a moment...')) {
+                    return cachedContent;
+                }
             }
+            fs.unlinkSync(cacheFile);
         }
 
         try {
             logger.info(`Fetching HTML via Puppeteer from ${url}`);
-            const page = await this.getPage();
+            await this.getBrowser();
+            const { page, index } = await acquirePage();
 
-            logger.debug(`Adding random human-like delay before navigation...`);
-            await new Promise(r => setTimeout(r, 2000 + Math.random() * 5000));
+            try {
+                // Human-like delay: 6–18s with occasional longer pauses
+                const baseDelay = 6000 + Math.random() * 12000;
+                const longPause = Math.random() < 0.15 ? 10000 + Math.random() * 20000 : 0; // 15% chance of 10–30s extra pause
+                await new Promise(r => setTimeout(r, baseDelay + longPause));
 
-            logger.debug(`Navigating...`);
-            await page.goto(url, { waitUntil: 'networkidle2', timeout: 90000 });
+                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 90000 });
 
-            // Check if we are stuck on a challenge page
-            let html = await page.content();
-            let pageTitle = await page.title();
+                let html = await page.content();
+                const pageTitle = await page.title();
 
-            if (html.includes('Just a moment...') || pageTitle.includes('Just a moment')) {
-                logger.warn(`Cloudflare Challenge detected on ${url}. Waiting up to 60s for auto-pass...`);
-                try {
-                    // Look for content markers that indicate a real Cardmarket page
-                    await page.waitForFunction(() => {
-                        const text = document.body.innerText;
-                        return !text.includes('Just a moment...') && !document.title.includes('Just a moment');
-                    }, { timeout: 60000 });
-                    
-                    logger.info(`Successfully passed Cloudflare challenge for ${url}`);
-                    // Extra wait to be safe after bypass
-                    await new Promise(r => setTimeout(r, 2000));
-                } catch (e) {
-                    logger.warn(`Timeout or error during CF bypass on ${url}`);
+                if (html.includes('Just a moment...') || pageTitle.includes('Just a moment')) {
+                    logger.warn(`Cloudflare Challenge detected on ${url}. Waiting up to 60s for auto-pass...`);
+                    try {
+                        await page.waitForFunction(() => {
+                            const text = document.body.innerText;
+                            return !text.includes('Just a moment...') && !document.title.includes('Just a moment');
+                        }, { timeout: 60000 });
+                        logger.info(`Successfully passed Cloudflare challenge for ${url}`);
+                        await new Promise(r => setTimeout(r, 2000));
+                    } catch (e) {
+                        logger.warn(`Timeout or error during CF bypass on ${url}`);
+                    }
                 }
+
+                // Simulate human scrolling behaviour
+                await page.evaluate(() => {
+                    window.scrollBy(0, 200 + Math.random() * 600);
+                });
+                await new Promise(r => setTimeout(r, 500 + Math.random() * 1000));
+                await page.evaluate(() => {
+                    window.scrollBy(0, 100 + Math.random() * 300);
+                });
+
+                html = await page.content();
+
+                if (html.includes('Just a moment...')) {
+                    throw new Error('Unable to bypass Cloudflare Block - HTML still shows challenge after waiting');
+                }
+
+                if (useCache && process.env.ENABLE_SCRAPER_CACHE === 'true') {
+                    if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+                    fs.writeFileSync(cacheFile, html);
+                }
+
+                return html;
+            } finally {
+                releasePage(index);
             }
-
-            // Scroll down for lazy loaded images
-            await page.evaluate(() => window.scrollBy(0, 500));
-            
-            html = await page.content();
-
-            if (html.includes('Just a moment...')) {
-                throw new Error("Unable to bypass Cloudflare Block - HTML still shows challenge after waiting");
-            }
-
-            if (process.env.ENABLE_SCRAPER_CACHE === 'true') {
-                if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
-                fs.writeFileSync(cacheFile, html);
-            }
-
-            return html;
         } catch (error: any) {
             logger.error(`Error fetching ${url} via Puppeteer: ${error.message}`);
             throw error;
@@ -156,7 +314,6 @@ export const cardmarketService = {
             const id = $(el).attr('value');
             const name = $(el).text().trim();
             if (id && id !== '0' && name) {
-                // Return search URL that queries all products within expansion and returns them in a list
                 expansions.push({
                     name,
                     url: `${BASE_URL}/Products/Search?idCategory=0&idExpansion=${id}&mode=list`
@@ -173,7 +330,6 @@ export const cardmarketService = {
             const $ = cheerio.load(html);
             const products: ParsedProduct[] = [];
 
-            // Actual DOM structure on Search Results list view
             $('.table-body > .row[id^="productRow"]').each((_, el) => {
                 const nameNode = $(el).find('[data-testid="name"] a');
                 const name = nameNode.text().trim();
@@ -190,7 +346,6 @@ export const cardmarketService = {
                 }
 
                 if (!imageUrl) {
-                    // Fallback just in case
                     const imgNode = $(el).find('.col-icon img');
                     if (imgNode.length > 0) {
                         imageUrl = imgNode.attr('src') || '';
@@ -256,9 +411,7 @@ export const cardmarketService = {
                     imageUrl = imgEl.attr('data-echo')!;
                 }
 
-                // Extract expansion name from the tooltip aria-label
                 const expansionName = $(el).find('.expansion-symbol').attr('aria-label') || '';
-
                 const urlParts = link.split('/');
                 const externalId = urlParts[urlParts.length - 1] || Buffer.from(link).toString('base64');
 
@@ -273,7 +426,6 @@ export const cardmarketService = {
                 }
             });
 
-            // Check if there's a next page button that is NOT disabled
             const nextButton = $('a[data-direction="next"]');
             const hasNextPage = nextButton.length > 0 && !nextButton.hasClass('disabled');
 
@@ -284,16 +436,121 @@ export const cardmarketService = {
         }
     },
 
-    async fetchProductDetails(productUrl: string): Promise<{ trendPrice?: number, fromPrice?: number, oneDayAvg?: number, sevenDayAvg?: number, thirtyDayAvg?: number, availableItems?: number }> {
-        // Enforce English language filter
-        const urlToFetch = productUrl.includes('?') 
-            ? `${productUrl}&language=1` 
-            : `${productUrl}?language=1`;
-            
+    /**
+     * Scrape category listing page (list view) – returns From price + availability for all products on the page.
+     * Much more efficient than visiting individual product pages.
+     */
+    async fetchCategoryListPage(pageUrl: string): Promise<{
+        products: Array<{ externalId: string; name: string; url: string; fromPrice: number; available: number }>;
+        hasNextPage: boolean;
+    }> {
         try {
-            const html = await this.fetchHtml(urlToFetch, false); // Do not cache prices permanently
+            const ONE_HOUR = 60 * 60 * 1000;
+            const html = await fetchHtmlWithCookies(pageUrl, ONE_HOUR);
             const $ = cheerio.load(html);
-            
+            const products: Array<{ externalId: string; name: string; url: string; fromPrice: number; available: number }> = [];
+
+            const parsePriceString = (str: string) => {
+                let clean = str.replace(/[€$£]/g, '').trim().replace(/\s/g, '');
+                const lastComma = clean.lastIndexOf(',');
+                const lastDot = clean.lastIndexOf('.');
+                if (lastComma > lastDot) clean = clean.replace(/\./g, '').replace(',', '.');
+                else if (lastDot > lastComma) clean = clean.replace(/,/g, '');
+                else if (lastComma !== -1 && lastDot === -1) clean = clean.replace(',', '.');
+                return parseFloat(clean) || 0;
+            };
+
+            // List view: table rows
+            $('table tbody tr, .table-body .row').each((_, row) => {
+                const $row = $(row);
+
+                // Find the product link
+                const link = $row.find('a[href*="/Products/"]');
+                if (link.length === 0) return;
+
+                const name = link.text().trim();
+                const href = link.attr('href') || '';
+                if (!name || !href) return;
+
+                const urlParts = href.split('/');
+                const externalId = urlParts[urlParts.length - 1] || '';
+
+                // Find available count and from price from table cells or spans
+                const cells = $row.find('td');
+                let available = 0;
+                let fromPrice = 0;
+
+                if (cells.length >= 2) {
+                    // Table layout: last cell = price, second to last = available
+                    const priceText = cells.last().text().trim();
+                    const availText = cells.eq(cells.length - 2).text().trim();
+                    fromPrice = parsePriceString(priceText);
+                    available = parseInt(availText.replace(/\D/g, '')) || 0;
+                }
+
+                // Fallback: try to find price from any text containing €
+                if (fromPrice === 0) {
+                    const priceMatch = $row.text().match(/(\d[\d.,]*)\s*€/);
+                    if (priceMatch) fromPrice = parsePriceString(priceMatch[1] + ' €');
+                }
+
+                if (name && externalId && fromPrice > 0) {
+                    products.push({
+                        externalId,
+                        name,
+                        url: href.startsWith('http') ? href : `https://www.cardmarket.com${href}`,
+                        fromPrice,
+                        available,
+                    });
+                }
+            });
+
+            // Grid view fallback: also parse .galleryBox items for From price
+            if (products.length === 0) {
+                $('.galleryBox, [class*="product-card"]').each((_, el) => {
+                    const $el = $(el);
+                    const link = $el.is('a') ? $el : $el.find('a').first();
+                    const href = link.attr('href') || '';
+                    const name = $el.find('img').attr('alt') || link.text().trim();
+                    const urlParts = href.split('/');
+                    const externalId = urlParts[urlParts.length - 1] || '';
+
+                    const priceMatch = $el.text().match(/(?:From\s+)?(\d[\d.,]*)\s*€/i);
+                    const fromPrice = priceMatch ? parsePriceString(priceMatch[1] + ' €') : 0;
+
+                    if (name && externalId && fromPrice > 0) {
+                        products.push({
+                            externalId,
+                            name,
+                            url: href.startsWith('http') ? href : `https://www.cardmarket.com${href}`,
+                            fromPrice,
+                            available: 0,
+                        });
+                    }
+                });
+            }
+
+            const nextButton = $('a[data-direction="next"]');
+            const hasNextPage = nextButton.length > 0 && !nextButton.hasClass('disabled');
+
+            return { products, hasNextPage };
+        } catch (error) {
+            logger.warn(`Could not fetch category list page at ${pageUrl}`);
+            return { products: [], hasNextPage: false };
+        }
+    },
+
+    async fetchProductDetails(productUrl: string): Promise<{ trendPrice?: number, fromPrice?: number, oneDayAvg?: number, sevenDayAvg?: number, thirtyDayAvg?: number, availableItems?: number }> {
+        const urlToFetch = productUrl.includes('?')
+            ? `${productUrl}&language=1`
+            : `${productUrl}?language=1`;
+
+        try {
+            // Cache price pages for 1 hour to avoid redundant scraping
+            const ONE_HOUR = 60 * 60 * 1000;
+            const html = await fetchHtmlWithCookies(urlToFetch, ONE_HOUR);
+            const $ = cheerio.load(html);
+
             let trendPrice: number | undefined;
             let fromPrice: number | undefined;
             let oneDayAvg: number | undefined;
@@ -302,26 +559,18 @@ export const cardmarketService = {
             let availableItems: number | undefined;
 
             const parsePriceString = (str: string) => {
-                // 1. Remove currency and whitespace
                 let clean = str.replace(/[€$£]/g, '').trim().replace(/\s/g, '');
-                
-                // 2. Identify if it's European (1.234,56) or English (1,234.56)
-                // If it has both . and , check which one comes last
                 const lastComma = clean.lastIndexOf(',');
                 const lastDot = clean.lastIndexOf('.');
-                
+
                 if (lastComma > lastDot) {
-                    // European: remove all dots (thousands), replace comma with dot (decimal)
                     clean = clean.replace(/\./g, '').replace(',', '.');
                 } else if (lastDot > lastComma) {
-                    // English: remove all commas (thousands)
                     clean = clean.replace(/,/g, '');
                 } else if (lastComma !== -1 && lastDot === -1) {
-                    // Only comma: replace with dot
                     clean = clean.replace(',', '.');
                 }
-                // If only dot or no separators, parseFloat handles it directly
-                
+
                 const parsed = parseFloat(clean);
                 if (isNaN(parsed)) {
                     logger.warn(`Failed to parse price string: "${str}"`);
@@ -335,13 +584,13 @@ export const cardmarketService = {
                     const label = $(dt).text().trim();
                     const dd = $(dt).next('dd');
                     const value = $(dd).text().trim();
-                    
+
                     if (label.includes('Trend Price') || label.includes('Price Trend')) trendPrice = parsePriceString(value);
                     if (label.toLowerCase().includes('from')) fromPrice = parsePriceString(value);
-                    if (label.includes('1-day average price')) oneDayAvg = parsePriceString(value);
-                    if (label.includes('7-day average price')) sevenDayAvg = parsePriceString(value);
-                    if (label.includes('30-days average price') || label.includes('30-day average price')) thirtyDayAvg = parsePriceString(value);
-                    if (label.toLowerCase().includes('available items') || 
+                    if (label.includes('1-day average price') || label.includes('1-days average price')) oneDayAvg = parsePriceString(value);
+                    if (label.includes('7-day average price') || label.includes('7-days average price')) sevenDayAvg = parsePriceString(value);
+                    if (label.includes('30-day average price') || label.includes('30-days average price')) thirtyDayAvg = parsePriceString(value);
+                    if (label.toLowerCase().includes('available items') ||
                         label.toLowerCase().includes('available product') ||
                         label.toLowerCase().includes('number of items') ||
                         label.toLowerCase().includes('items available')) {
@@ -351,8 +600,9 @@ export const cardmarketService = {
             });
 
             return { trendPrice, fromPrice, oneDayAvg, sevenDayAvg, thirtyDayAvg, availableItems };
-        } catch (error) {
-            logger.warn(`Could not fetch product details for ${urlToFetch}`);
+        } catch (error: any) {
+            const status = error.response?.statusCode || error.response?.status || 'N/A';
+            logger.warn(`Could not fetch product details for ${urlToFetch} — HTTP ${status}: ${error.message}`);
             return {};
         }
     }

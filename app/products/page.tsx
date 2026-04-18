@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, Filter, Loader2, Package } from "lucide-react";
+import { Pagination } from "@/components/ui/Pagination";
 
 export default function ProductsPage() {
     const router = useRouter();
@@ -17,11 +18,23 @@ export default function ProductsPage() {
     const [yearFilter, setYearFilter] = useState('all');
     const [sortFilter, setSortFilter] = useState('name_asc');
 
+    // Pagination State
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
+    const PAGE_SIZE = 25;
+
     // Data State
     const [products, setProducts] = useState<any[]>([]);
     const [availableExpansions, setAvailableExpansions] = useState<{ main: string[], other: string[] }>({ main: [], other: [] });
     const [availableYears, setAvailableYears] = useState<number[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Reset to page 1 when filters change
+    const handleSearchChange = (q: string) => { setSearchQuery(q); setPage(1); };
+    const handleExpansionChange = (v: string) => { setExpansionFilter(v); setPage(1); };
+    const handleYearChange = (v: string) => { setYearFilter(v); setPage(1); };
+    const handleSortChange = (v: string) => { setSortFilter(v); setPage(1); };
 
     // Fetch Database Products
     useEffect(() => {
@@ -32,13 +45,16 @@ export default function ProductsPage() {
                     q: searchQuery,
                     expansion: expansionFilter,
                     year: yearFilter,
-                    sort: sortFilter
+                    sort: sortFilter,
+                    page: String(page),
                 });
                 const res = await fetch(`/api/products?${params.toString()}`);
                 const data = await res.json();
 
                 if (data.products) {
                     setProducts(data.products);
+                    setTotalPages(data.totalPages ?? 1);
+                    setTotalItems(data.total ?? 0);
                     setAvailableExpansions(data.filters.expansions || { main: [], other: [] });
                     setAvailableYears(data.filters.years || []);
                 }
@@ -49,15 +65,10 @@ export default function ProductsPage() {
             }
         };
 
-        // Debounce search
-        const timeoutId = setTimeout(() => {
-            fetchProducts();
-        }, 300);
-
+        // Debounce search, immediate for other changes
+        const timeoutId = setTimeout(fetchProducts, 300);
         return () => clearTimeout(timeoutId);
-    }, [searchQuery, expansionFilter, yearFilter, sortFilter]);
-
-    // Metrics are now provided by the API
+    }, [searchQuery, expansionFilter, yearFilter, sortFilter, page]);
 
     return (
         <div className="p-6 lg:p-8 max-w-[1600px] mx-auto h-[calc(100vh-64px)] flex flex-col">
@@ -84,7 +95,7 @@ export default function ProductsPage() {
                                     type="text"
                                     placeholder="E.g. Booster Box..."
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) => handleSearchChange(e.target.value)}
                                     className="w-full bg-[#151A21] border border-[rgba(255,255,255,0.06)] rounded-md pl-9 pr-3 py-2 text-sm text-gray-200 placeholder:text-gray-500 focus:outline-none focus:border-primary transition-colors"
                                 />
                             </div>
@@ -95,7 +106,7 @@ export default function ProductsPage() {
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">Expansion Set</label>
                             <select
                                 value={expansionFilter}
-                                onChange={(e) => setExpansionFilter(e.target.value)}
+                                onChange={(e) => handleExpansionChange(e.target.value)}
                                 className="w-full bg-[#151A21] border border-[rgba(255,255,255,0.06)] rounded-md px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-primary appearance-none cursor-pointer"
                             >
                                 <option value="all">All Sets</option>
@@ -121,7 +132,7 @@ export default function ProductsPage() {
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">Release Year</label>
                             <select
                                 value={yearFilter}
-                                onChange={(e) => setYearFilter(e.target.value)}
+                                onChange={(e) => handleYearChange(e.target.value)}
                                 className="w-full bg-[#151A21] border border-[rgba(255,255,255,0.06)] rounded-md px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-primary appearance-none cursor-pointer"
                             >
                                 <option value="all">Any Year</option>
@@ -136,7 +147,7 @@ export default function ProductsPage() {
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">Sort By</label>
                             <select
                                 value={sortFilter}
-                                onChange={(e) => setSortFilter(e.target.value)}
+                                onChange={(e) => handleSortChange(e.target.value)}
                                 className="w-full bg-[#151A21] border border-[rgba(255,255,255,0.06)] rounded-md px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-primary appearance-none cursor-pointer"
                             >
                                 <option value="name_asc">Name (A-Z)</option>
@@ -150,8 +161,8 @@ export default function ProductsPage() {
                 </Card>
 
                 {/* 2. Products Table */}
-                <Card className="flex-1 bg-[#0E1116] border-[rgba(255,255,255,0.06)] overflow-hidden flex flex-col h-full min-w-0">
-                    <div className="overflow-y-auto custom-scrollbar flex-1 relative">
+                <Card className="flex-1 min-h-0 bg-[#0E1116] border-[rgba(255,255,255,0.06)] overflow-hidden flex flex-col min-w-0">
+                    <div className="overflow-y-auto custom-scrollbar flex-1 min-h-0 relative">
                         {loading && (
                             <div className="absolute inset-0 bg-[#0E1116]/50 backdrop-blur-sm z-20 flex items-center justify-center">
                                 <Loader2 className="w-8 h-8 text-primary animate-spin" />
@@ -177,7 +188,7 @@ export default function ProductsPage() {
                                     </TableRow>
                                 ) : (
                                     products.map((product) => {
-                                        const change30D = product.change30D || 0;
+                                        const change30D: number | null = product.change30D ?? null;
                                         const score = product.nexfolioScore || 50;
                                         return (
                                             <TableRow
@@ -224,9 +235,13 @@ export default function ProductsPage() {
                                                 </TableCell>
 
                                                 <TableCell className="py-4 text-right">
-                                                    <div className={`text-sm font-medium ${change30D >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                        {change30D > 0 ? '+' : ''}{change30D.toFixed(1)}%
-                                                    </div>
+                                                    {change30D == null ? (
+                                                        <span className="text-sm text-gray-600">—</span>
+                                                    ) : (
+                                                        <div className={`text-sm font-medium ${change30D >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                            {change30D > 0 ? '+' : ''}{change30D.toFixed(1)}%
+                                                        </div>
+                                                    )}
                                                 </TableCell>
 
                                                 <TableCell className="py-4 text-right">
@@ -247,9 +262,17 @@ export default function ProductsPage() {
                             </TableBody>
                         </Table>
                     </div>
+                    <div className="px-4 pb-3 shrink-0">
+                        <Pagination
+                            currentPage={page}
+                            totalPages={totalPages}
+                            onPageChange={setPage}
+                            totalItems={totalItems}
+                            pageSize={PAGE_SIZE}
+                        />
+                    </div>
                 </Card>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }
-

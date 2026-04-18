@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import './globals.css';
 import { NotificationProvider } from '@/context/NotificationContext';
+import { WatchlistHitsProvider } from '@/context/WatchlistHitsContext';
 
 export const metadata: Metadata = {
     title: 'Nexfolio',
@@ -17,7 +18,9 @@ export default function RootLayout({
         <html lang="en" className={GeistSans.variable}>
             <body className="font-sans">
                 <NotificationProvider>
-                    {children}
+                    <WatchlistHitsProvider>
+                        {children}
+                    </WatchlistHitsProvider>
                 </NotificationProvider>
             </body>
         </html>

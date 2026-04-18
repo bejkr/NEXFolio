@@ -13,29 +13,54 @@ interface ProductSuggestion {
     price: number | null;
 }
 
+interface InitialProduct {
+    id: string;
+    name: string;
+    expansion: string;
+    category?: string;
+    price: number | null;
+    imageUrl: string | null;
+}
+
 interface Props {
     isOpen: boolean;
     onClose: () => void;
     onAdd: (item: CollectionItem) => void;
+    initialProduct?: InitialProduct;
 }
 
-export function AddItemModal({ isOpen, onClose, onAdd }: Props) {
+export function AddItemModal({ isOpen, onClose, onAdd, initialProduct }: Props) {
     const [suggestions, setSuggestions] = useState<ProductSuggestion[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
     const [formData, setFormData] = useState({
-        name: '',
-        set: '',
-        category: 'Sealed',
+        name: initialProduct?.name || '',
+        set: initialProduct?.expansion || '',
+        category: initialProduct?.category || 'Sealed',
         costBasis: '',
         purchaseDate: new Date().toISOString().split('T')[0],
-        imageUrl: '',
-        currentValue: 0, 
-        productId: null as string | null,
+        imageUrl: initialProduct?.imageUrl || '',
+        currentValue: initialProduct?.price || 0,
+        productId: initialProduct?.id || null as string | null,
         quantity: 1
     });
+
+    // Sync when initialProduct changes (e.g. opened from different product)
+    useEffect(() => {
+        if (initialProduct) {
+            setFormData(prev => ({
+                ...prev,
+                name: initialProduct.name,
+                set: initialProduct.expansion,
+                category: initialProduct.category || prev.category,
+                imageUrl: initialProduct.imageUrl || '',
+                currentValue: initialProduct.price || 0,
+                productId: initialProduct.id,
+            }));
+        }
+    }, [initialProduct?.id]);
 
     // Handle clicking outside of suggestions
     useEffect(() => {

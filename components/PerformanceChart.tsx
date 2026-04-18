@@ -112,7 +112,11 @@ export function PerformanceChart({ data: initialData, summary }: PerformanceChar
                                 tickLine={false}
                                 tick={{ fill: '#6b7280', fontSize: 12 }}
                                 tickFormatter={formatYAxis}
-                                domain={['auto', 'auto']}
+                                domain={([dataMin, dataMax]: [number, number]) => {
+                                    const range = dataMax - dataMin || dataMax * 0.05 || 100;
+                                    const pad = range * 0.25;
+                                    return [Math.floor(dataMin - pad), Math.ceil(dataMax + pad)];
+                                }}
                             />
                             <Tooltip
                                 contentStyle={{
@@ -128,7 +132,7 @@ export function PerformanceChart({ data: initialData, summary }: PerformanceChar
                                 cursor={{ stroke: 'rgba(0,229,153,0.3)' }}
                             />
                             <Area
-                                type="monotone"
+                                type="linear"
                                 dataKey="value"
                                 stroke="#00E599"
                                 strokeWidth={3}
