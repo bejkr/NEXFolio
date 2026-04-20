@@ -138,7 +138,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     if (!product) return null;
 
     return (
-        <div className="p-6 lg:p-8 max-w-[1200px] mx-auto space-y-4">
+        <div className="p-4 md:p-6 lg:p-8 max-w-[1200px] mx-auto space-y-4">
             {/* Back */}
             <button
                 onClick={() => router.push('/products')}
@@ -148,35 +148,37 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             </button>
 
             {/* Compact Header — image + name + Add to Collection */}
-            <div className="flex items-center gap-5">
-                <div className="w-16 h-16 rounded-xl bg-[#151A21] border border-[rgba(255,255,255,0.06)] flex items-center justify-center shrink-0 overflow-hidden">
-                    {product.imageUrl ? (
-                        <img
-                            src={`/api/proxy-image?url=${encodeURIComponent(product.imageUrl)}`}
-                            alt={product.name}
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <Package className="w-8 h-8 text-gray-500" />
-                    )}
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-white/10 text-white border border-white/20">
-                            {product.category}
-                        </span>
-                        <span className="text-xs text-gray-400 uppercase tracking-widest">{product.expansion}</span>
-                        <span className="text-xs text-gray-500">{product.releaseYear}</span>
+            <div className="flex flex-wrap items-start gap-4">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-[#151A21] border border-[rgba(255,255,255,0.06)] flex items-center justify-center shrink-0 overflow-hidden">
+                        {product.imageUrl ? (
+                            <img
+                                src={`/api/proxy-image?url=${encodeURIComponent(product.imageUrl)}`}
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <Package className="w-8 h-8 text-gray-500" />
+                        )}
                     </div>
-                    <h1 className="text-2xl font-bold text-white tracking-tight truncate">{product.name}</h1>
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-white/10 text-white border border-white/20">
+                                {product.category}
+                            </span>
+                            <span className="text-xs text-gray-400 uppercase tracking-widest">{product.expansion}</span>
+                            <span className="text-xs text-gray-500">{product.releaseYear}</span>
+                        </div>
+                        <h1 className="text-lg md:text-2xl font-bold text-white tracking-tight leading-snug">{product.name}</h1>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                     {/* Watch toggle */}
                     <button
                         onClick={toggleWatch}
                         disabled={watchLoading}
                         title={isWatching ? 'Remove from Watchlist' : 'Add to Watchlist'}
-                        className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium border transition-all ${
+                        className={`flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium border transition-all ${
                             isWatching
                                 ? 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
                                 : 'bg-white/[0.04] border-white/10 text-gray-400 hover:text-white hover:border-white/20'
@@ -186,13 +188,13 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                             ? <Loader2 className="w-4 h-4 animate-spin" />
                             : <Bookmark className={`w-4 h-4 ${isWatching ? 'fill-amber-400' : ''}`} />
                         }
-                        <span className="hidden sm:inline">{isWatching ? 'Watching' : 'Watch'}</span>
+                        <span>{isWatching ? 'Watching' : 'Watch'}</span>
                     </button>
 
                     {/* Add to collection */}
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="flex items-center gap-2 bg-primary text-[#0E1116] hover:bg-[#00c885] transition-all shadow-[0_0_15px_rgba(0,229,153,0.3)] hover:shadow-[0_0_20px_rgba(0,229,153,0.5)] rounded-md px-5 py-2 text-sm font-bold"
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary text-[#0E1116] hover:bg-[#00c885] transition-all shadow-[0_0_15px_rgba(0,229,153,0.3)] hover:shadow-[0_0_20px_rgba(0,229,153,0.5)] rounded-md px-4 py-2 text-sm font-bold"
                     >
                         <PlusCircle className="w-4 h-4" />
                         Add to Collection
@@ -201,11 +203,98 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Left: Chart + Commentary */}
-                <div className="lg:col-span-2 space-y-6">
-                    {/* Price History Chart */}
+                {/* Right: Sidebar — first in DOM so it appears above chart on mobile */}
+                <div className="space-y-6 order-1 lg:col-start-3 lg:row-start-1 lg:row-span-1">
+                    {/* Price Card */}
+                    <div className="bg-[#151A21] border border-[rgba(255,255,255,0.06)] rounded-xl p-5 shadow-lg">
+                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Current Est. Value</p>
+                        <div className="flex items-end gap-3 flex-wrap">
+                            <span className="text-3xl font-bold text-white tracking-tight">
+                                {product.price ? `€${product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : 'N/A'}
+                            </span>
+                            <div className="flex items-center gap-2 pb-1">
+                                {change30D == null ? (
+                                    <span className="text-sm text-gray-600">30D —</span>
+                                ) : (
+                                    <span className={`text-sm font-semibold ${change30D >= 0 ? 'text-[#00E599]' : 'text-[#FF4D4D]'}`}>
+                                        {change30D >= 0 ? '+' : ''}{change30D.toFixed(1)}% 30D
+                                    </span>
+                                )}
+                                <span className="text-gray-600 text-xs">·</span>
+                                {change12M == null ? (
+                                    <span className="text-sm text-gray-600">12M —</span>
+                                ) : (
+                                    <span className={`text-sm font-semibold ${change12M >= 0 ? 'text-[#00E599]' : 'text-[#FF4D4D]'}`}>
+                                        {change12M >= 0 ? '+' : ''}{change12M.toFixed(1)}% 12M
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="mt-2 flex items-center gap-2 flex-wrap">
+                            {product.lastPriceSync ? (
+                                <span className="inline-flex items-center text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                                    <Activity className="w-3 h-3 mr-1" /> LIVE
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center text-[10px] font-medium text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                                    ESTIMATED
+                                </span>
+                            )}
+                            {product.availabilityCount != null && (
+                                <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border ${product.availabilityCount < 20 ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20' : 'text-blue-400 bg-blue-500/10 border-blue-500/20'}`}>
+                                    <ShoppingCart className="w-3 h-3 mr-1" /> {product.availabilityCount} available
+                                </span>
+                            )}
+                            {product.lastPriceSync && (
+                                <span className="text-[10px] text-gray-500">
+                                    {new Date(product.lastPriceSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Nexfolio Score */}
                     <Card className="bg-[#0E1116] border-[rgba(255,255,255,0.06)] p-6">
-                        <div className="flex items-center justify-between mb-4">
+                        {(() => {
+                            const r = 44;
+                            const circ = 2 * Math.PI * r;
+                            const offset = circ * (1 - score / 100);
+                            const color = score >= 70 ? '#00E599' : score >= 40 ? '#f59e0b' : '#ef4444';
+                            const label = score >= 70 ? 'Strong' : score >= 40 ? 'Moderate' : 'Weak';
+                            return (
+                                <div className="flex items-center gap-5">
+                                    <div className="relative shrink-0">
+                                        <svg width="100" height="100" viewBox="0 0 100 100" className="-rotate-90">
+                                            <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+                                            <circle
+                                                cx="50" cy="50" r={r} fill="none"
+                                                stroke={color} strokeWidth="8"
+                                                strokeLinecap="round"
+                                                strokeDasharray={circ}
+                                                strokeDashoffset={offset}
+                                                style={{ transition: 'stroke-dashoffset 0.6s ease', filter: `drop-shadow(0 0 6px ${color}80)` }}
+                                            />
+                                        </svg>
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <span className="text-3xl font-bold text-white">{score}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Nexfolio Score</p>
+                                        <p className="text-lg font-bold" style={{ color }}>{label}</p>
+                                        <p className="text-xs text-gray-500 mt-1 leading-relaxed">Liquidity · Momentum · Scarcity</p>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </Card>
+                </div>
+
+                {/* Left: Chart + Commentary */}
+                <div className="lg:col-start-1 lg:col-span-2 lg:row-start-1 space-y-6 order-2">
+                    {/* Price History Chart */}
+                    <Card className="bg-[#0E1116] border-[rgba(255,255,255,0.06)] p-4 md:p-6">
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
                             <div>
                                 <h3 className="text-base font-semibold text-white">Price History</h3>
                                 {chartData.length > 1 && (
@@ -214,7 +303,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                                     </p>
                                 )}
                             </div>
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 flex-wrap">
                                 {TIMEFRAMES.map(t => (
                                     <button
                                         key={t}
@@ -310,92 +399,8 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                     <StoreOffers productId={product.id} />
                 </div>
 
-                {/* Right: Sidebar */}
-                <div className="space-y-6">
-                    {/* Price Card */}
-                    <div className="bg-[#151A21] border border-[rgba(255,255,255,0.06)] rounded-xl p-5 shadow-lg">
-                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Current Est. Value</p>
-                        <div className="flex items-end gap-3 flex-wrap">
-                            <span className="text-3xl font-bold text-white tracking-tight">
-                                {product.price ? `€${product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : 'N/A'}
-                            </span>
-                            <div className="flex items-center gap-2 pb-1">
-                                {change30D == null ? (
-                                    <span className="text-sm text-gray-600">30D —</span>
-                                ) : (
-                                    <span className={`text-sm font-semibold ${change30D >= 0 ? 'text-[#00E599]' : 'text-[#FF4D4D]'}`}>
-                                        {change30D >= 0 ? '+' : ''}{change30D.toFixed(1)}% 30D
-                                    </span>
-                                )}
-                                <span className="text-gray-600 text-xs">·</span>
-                                {change12M == null ? (
-                                    <span className="text-sm text-gray-600">12M —</span>
-                                ) : (
-                                    <span className={`text-sm font-semibold ${change12M >= 0 ? 'text-[#00E599]' : 'text-[#FF4D4D]'}`}>
-                                        {change12M >= 0 ? '+' : ''}{change12M.toFixed(1)}% 12M
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                        <div className="mt-2 flex items-center gap-2 flex-wrap">
-                            {product.lastPriceSync ? (
-                                <span className="inline-flex items-center text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
-                                    <Activity className="w-3 h-3 mr-1" /> LIVE
-                                </span>
-                            ) : (
-                                <span className="inline-flex items-center text-[10px] font-medium text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-                                    ESTIMATED
-                                </span>
-                            )}
-                            {product.availabilityCount != null && (
-                                <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border ${product.availabilityCount < 20 ? 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20' : 'text-blue-400 bg-blue-500/10 border-blue-500/20'}`}>
-                                    <ShoppingCart className="w-3 h-3 mr-1" /> {product.availabilityCount} available
-                                </span>
-                            )}
-                            {product.lastPriceSync && (
-                                <span className="text-[10px] text-gray-500">
-                                    {new Date(product.lastPriceSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Nexfolio Score */}
-                    <Card className="bg-[#0E1116] border-[rgba(255,255,255,0.06)] p-6">
-                        {(() => {
-                            const r = 44;
-                            const circ = 2 * Math.PI * r;
-                            const offset = circ * (1 - score / 100);
-                            const color = score >= 70 ? '#00E599' : score >= 40 ? '#f59e0b' : '#ef4444';
-                            const label = score >= 70 ? 'Strong' : score >= 40 ? 'Moderate' : 'Weak';
-                            return (
-                                <div className="flex items-center gap-5">
-                                    <div className="relative shrink-0">
-                                        <svg width="100" height="100" viewBox="0 0 100 100" className="-rotate-90">
-                                            <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
-                                            <circle
-                                                cx="50" cy="50" r={r} fill="none"
-                                                stroke={color} strokeWidth="8"
-                                                strokeLinecap="round"
-                                                strokeDasharray={circ}
-                                                strokeDashoffset={offset}
-                                                style={{ transition: 'stroke-dashoffset 0.6s ease', filter: `drop-shadow(0 0 6px ${color}80)` }}
-                                            />
-                                        </svg>
-                                        <div className="absolute inset-0 flex items-center justify-center">
-                                            <span className="text-3xl font-bold text-white">{score}</span>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Nexfolio Score</p>
-                                        <p className="text-lg font-bold" style={{ color }}>{label}</p>
-                                        <p className="text-xs text-gray-500 mt-1 leading-relaxed">Liquidity · Momentum · Scarcity</p>
-                                    </div>
-                                </div>
-                            );
-                        })()}
-                    </Card>
-
+                {/* Key Metrics sidebar — last on mobile, col 3 row 2 on desktop */}
+                <div className="space-y-6 order-3 lg:col-start-3 lg:row-start-2">
                     {/* Key Metrics */}
                     <Card className="bg-[#0E1116] border-[rgba(255,255,255,0.06)]">
                         <CardHeader className="pb-3 border-b border-[rgba(255,255,255,0.06)]">

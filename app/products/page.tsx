@@ -6,7 +6,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Filter, Loader2, Package } from "lucide-react";
+import { Search, Filter, Loader2, Package, ChevronDown } from "lucide-react";
+import { ExpansionFilter } from "@/components/ExpansionFilter";
 import { Pagination } from "@/components/ui/Pagination";
 
 export default function ProductsPage() {
@@ -29,6 +30,15 @@ export default function ProductsPage() {
     const [availableExpansions, setAvailableExpansions] = useState<{ main: string[], other: string[] }>({ main: [], other: [] });
     const [availableYears, setAvailableYears] = useState<number[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const [filtersOpen, setFiltersOpen] = useState(true);
+
+    const activeFilterCount = [
+        searchQuery !== '',
+        expansionFilter !== 'all',
+        yearFilter !== 'all',
+        sortFilter !== 'name_asc',
+    ].filter(Boolean).length;
 
     // Reset to page 1 when filters change
     const handleSearchChange = (q: string) => { setSearchQuery(q); setPage(1); };
@@ -81,10 +91,22 @@ export default function ProductsPage() {
 
                 {/* 1. Filters (Top) */}
                 <Card className="bg-[#0E1116] border-[rgba(255,255,255,0.06)] shrink-0 w-full rounded-xl">
-                    <div className="p-4 border-b border-[rgba(255,255,255,0.06)] flex items-center space-x-2 bg-[#0E1116] rounded-t-xl">
-                        <Filter className="w-4 h-4 text-gray-400" />
-                        <h2 className="font-semibold text-white">DB Filters</h2>
-                    </div>
+                    <button
+                        onClick={() => setFiltersOpen(o => !o)}
+                        className="w-full p-4 flex items-center justify-between bg-[#0E1116] rounded-t-xl hover:bg-white/[0.02] transition-colors"
+                    >
+                        <div className="flex items-center gap-2">
+                            <Filter className="w-4 h-4 text-gray-400" />
+                            <h2 className="font-semibold text-white">DB Filters</h2>
+                            {activeFilterCount > 0 && (
+                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-[#0E1116] text-[10px] font-bold">
+                                    {activeFilterCount}
+                                </span>
+                            )}
+                        </div>
+                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${filtersOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {filtersOpen && (
                     <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {/* Search Input */}
                         <div>
@@ -104,27 +126,11 @@ export default function ProductsPage() {
                         {/* Expansion */}
                         <div>
                             <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">Expansion Set</label>
-                            <select
+                            <ExpansionFilter
                                 value={expansionFilter}
-                                onChange={(e) => handleExpansionChange(e.target.value)}
-                                className="w-full bg-[#151A21] border border-[rgba(255,255,255,0.06)] rounded-md px-3 py-2 text-sm text-gray-200 focus:outline-none focus:border-primary appearance-none cursor-pointer"
-                            >
-                                <option value="all">All Sets</option>
-                                {availableExpansions.main.length > 0 && (
-                                    <optgroup label="Main Sets" className="bg-[#0E1116] text-primary font-bold">
-                                        {availableExpansions.main.map(exp => (
-                                            <option key={exp} value={exp} className="bg-[#151A21] text-gray-200 font-normal">{exp}</option>
-                                        ))}
-                                    </optgroup>
-                                )}
-                                {availableExpansions.other.length > 0 && (
-                                    <optgroup label="Other" className="bg-[#0E1116] text-gray-400">
-                                        {availableExpansions.other.map(exp => (
-                                            <option key={exp} value={exp} className="bg-[#151A21] text-gray-200">{exp}</option>
-                                        ))}
-                                    </optgroup>
-                                )}
-                            </select>
+                                onChange={handleExpansionChange}
+                                expansions={availableExpansions}
+                            />
                         </div>
 
                         {/* Release Year */}
@@ -158,6 +164,7 @@ export default function ProductsPage() {
                         </div>
 
                     </CardContent>
+                    )}
                 </Card>
 
                 {/* 2. Products Table */}

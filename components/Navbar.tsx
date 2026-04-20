@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, PanelLeft, Package, X } from 'lucide-react';
+import { Search, Menu, Package, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { NotificationDropdown } from './NotificationDropdown';
@@ -73,8 +73,11 @@ export function Navbar() {
     return (
         <header className="h-16 border-b border-[rgba(255,255,255,0.06)] flex items-center justify-between px-6 bg-[#0E1116] shrink-0">
             <div className="flex items-center flex-1">
-                <button className="lg:hidden text-gray-400 hover:text-white mr-4">
-                    <PanelLeft className="h-5 w-5" />
+                <button
+                    className="lg:hidden text-gray-400 hover:text-white mr-4"
+                    onClick={() => window.dispatchEvent(new Event('open-mobile-nav'))}
+                >
+                    <Menu className="h-5 w-5" />
                 </button>
 
                 {/* Search */}

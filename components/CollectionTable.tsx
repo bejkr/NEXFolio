@@ -88,10 +88,10 @@ export function CollectionTable({ data, onDelete }: CollectionTableProps) {
                                             </span>
                                         </TableCell>
                                         <TableCell className="text-right text-gray-400 font-medium">
-                                            {formatCurrency(item.costBasis)}
+                                            {formatCurrency(item.costBasis * qty)}
                                         </TableCell>
                                         <TableCell className="text-right text-white font-bold tracking-tight">
-                                            {formatCurrency(item.currentValue)}
+                                            {formatCurrency(item.currentValue * qty)}
                                         </TableCell>
                                         <TableCell className={`text-right font-medium ${returnColor}`}>
                                             <div className="flex flex-col items-end">

@@ -39,7 +39,7 @@ export function CollectionGrid({ data, onDelete }: CollectionGridProps) {
                 const returnColor = isPositive ? '!text-[#00E599]' : '!text-[#FF4D4D]';
 
                 return (
-                    <Card key={item.id} className="bg-[#151A21] border border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.2)] transition-all overflow-hidden group cursor-pointer flex flex-col h-full">
+                    <Card key={item.id} className="relative bg-[#151A21] border border-[rgba(255,255,255,0.06)] hover:border-[rgba(255,255,255,0.2)] transition-all overflow-hidden group cursor-pointer flex flex-col h-full">
                         {item.productId ? (
                             <Link href={`/products/${item.productId}`} className="contents">
                                 <div className="relative aspect-square w-full bg-black/40 border-b border-[rgba(255,255,255,0.06)] overflow-hidden flex items-center justify-center">
