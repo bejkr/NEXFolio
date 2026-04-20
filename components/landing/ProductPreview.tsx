@@ -13,7 +13,7 @@ export const ProductPreview: React.FC = () => {
                     {/* Shadow/Glow effect behind image */}
                     <div className="absolute -inset-4 bg-[#00E599]/20 blur-[60px] rounded-full opacity-50 pulse" />
                     
-                    <div className="relative rounded-3xl border border-white/10 overflow-hidden shadow-2xl premium-glow animate-fade-in-up">
+                    <div className="relative rounded-3xl border border-[rgba(255,255,255,0.06)] overflow-hidden shadow-2xl premium-glow animate-fade-in-up">
                         <img 
                             src="/landing-preview.png" 
                             alt="NexFolio Dashboard" 

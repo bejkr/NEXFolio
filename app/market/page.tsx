@@ -1,13 +1,16 @@
 import { Metadata } from 'next';
 import prisma from '@/lib/prisma';
 import { formatDistanceToNow } from 'date-fns';
-import { calculatePriceChange } from '@/lib/scoring';
+import { calculatePriceChange, calculateNexfolioScore } from '@/lib/scoring';
 import { MarketContent } from '@/components/market/MarketContent';
 import {
     MarketOverviewData,
     EraPerformance,
     MarketAsset,
     MarketTrendData,
+    DiscoverAsset,
+    TrendingSet,
+    PriceBreakout,
 } from "@/lib/mockData";
 
 export const metadata: Metadata = {
@@ -34,15 +37,9 @@ export default async function MarketPage() {
     const twelveMonthsAgo = new Date(now); twelveMonthsAgo.setFullYear(now.getFullYear() - 1);
 
     // ── 1. Fetch product lists ────────────────────────────────────
-    const [sealedProducts, gradedProducts, lastSync] = await Promise.all([
+    const [sealedProducts, lastSync] = await Promise.all([
         prisma.product.findMany({
             where: { category: { contains: 'Sealed', mode: 'insensitive' }, price: { not: null } },
-            orderBy: { availabilityCount: 'desc' },
-            take: 150,
-            select: { id: true, price: true, availabilityCount: true },
-        }),
-        prisma.product.findMany({
-            where: { category: { contains: 'Graded', mode: 'insensitive' }, price: { not: null } },
             orderBy: { availabilityCount: 'desc' },
             take: 150,
             select: { id: true, price: true, availabilityCount: true },
@@ -55,18 +52,14 @@ export default async function MarketPage() {
     ]);
 
     const sealedIdSet = new Set(sealedProducts.map(p => p.id));
-    const gradedIdSet = new Set(gradedProducts.map(p => p.id));
-    const trendIds = [
-        ...sealedProducts.slice(0, 60).map(p => p.id),
-        ...gradedProducts.slice(0, 40).map(p => p.id),
-    ];
+    const trendIds = sealedProducts.slice(0, 80).map(p => p.id);
 
     // ── 2. Price history for overview index & trend chart ─────────
     const [oldPriceHistory, trendHistory] = await Promise.all([
         // Prices at 12M ago — for sealed/graded index
         prisma.priceHistory.findMany({
             where: {
-                productId: { in: [...sealedProducts.map(p => p.id), ...gradedProducts.map(p => p.id)] },
+                productId: { in: sealedProducts.map(p => p.id) },
                 date: { lte: twelveMonthsAgo },
             },
             orderBy: { date: 'desc' },
@@ -87,7 +80,7 @@ export default async function MarketPage() {
         take: 300,
         select: {
             id: true, name: true, category: true, price: true,
-            availabilityCount: true, releaseYear: true,
+            availabilityCount: true, releaseYear: true, expansion: true, imageUrl: true,
             priceHistory: { orderBy: { date: 'desc' }, take: 90 },
         },
     });
@@ -109,14 +102,11 @@ export default async function MarketPage() {
     }
 
     const sealedIndex12M = avgIndexChange(sealedProducts);
-    const gradedIndex12M = avgIndexChange(gradedProducts);
 
     const maxListings = Math.max(...topProducts.map(p => p.availabilityCount ?? 0), 1);
 
     const avgAvail = topProducts.reduce((s, p) => s + (p.availabilityCount ?? 0), 0) / (topProducts.length || 1);
-    const averageLiquidity = Math.min(100, Math.round(
-        (Math.log10(avgAvail + 1) / Math.log10(maxListings + 1)) * 100
-    ));
+    const averageLiquidity = Math.round(avgAvail);
 
     // Market volatility: std dev of change30D values across top products
     const allChanges30D = topProducts
@@ -130,46 +120,55 @@ export default async function MarketPage() {
         marketVolatility = Math.min(99, Number(Math.sqrt(variance).toFixed(1)));
     }
 
+    const sealedPriced = sealedProducts.filter(p => p.price != null && p.price > 0);
+    const sealedAvgPrice = sealedPriced.length > 0
+        ? Number((sealedPriced.reduce((s, p) => s + p.price!, 0) / sealedPriced.length).toFixed(2))
+        : undefined;
+
+    const raw30D = topProducts
+        .map(p => calculatePriceChange(p.priceHistory, 30))
+        .filter((v): v is number => v !== null && v > -80 && v < 200);
+    const sealedIndex30D = raw30D.length > 0
+        ? Number((raw30D.reduce((a, b) => a + b, 0) / raw30D.length).toFixed(1))
+        : undefined;
+
     const marketOverview: MarketOverviewData = {
+        sealedAvgPrice,
         sealedIndex12M,
-        gradedIndex12M,
+        sealedIndex30D,
         averageLiquidity,
         marketVolatility,
     };
 
-    // ── 5. MarketTrendChart (monthly avg price for sealed vs graded)
-    const monthlyBuckets: Record<string, { sealed: number[]; graded: number[] }> = {};
+    // ── 5. MarketTrendChart (monthly avg sealed price)
+    const monthlyBuckets: Record<string, number[]> = {};
 
     for (const h of trendHistory) {
         const d = new Date(h.date);
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-        if (!monthlyBuckets[key]) monthlyBuckets[key] = { sealed: [], graded: [] };
-        if (sealedIdSet.has(h.productId)) monthlyBuckets[key].sealed.push(h.price);
-        if (gradedIdSet.has(h.productId)) monthlyBuckets[key].graded.push(h.price);
+        if (!monthlyBuckets[key]) monthlyBuckets[key] = [];
+        if (sealedIdSet.has(h.productId)) monthlyBuckets[key].push(h.price);
     }
 
     const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const trendData: MarketTrendData[] = Object.entries(monthlyBuckets)
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([key, { sealed, graded }]) => {
+        .map(([key, prices]) => {
             const [year, month] = key.split('-');
-            const avg = (arr: number[]) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+            const avg = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
             return {
                 date: `${MONTHS[parseInt(month) - 1]} ${year.slice(2)}`,
-                sealedIndex: Number(avg(sealed).toFixed(2)),
-                gradedIndex: Number(avg(graded).toFixed(2)),
+                sealedIndex: Number(avg.toFixed(2)),
             };
         })
-        .filter(d => d.sealedIndex > 0 || d.gradedIndex > 0);
+        .filter(d => d.sealedIndex > 0);
 
     // ── 6. Movers & Liquidity Board ───────────────────────────────
     const withMetrics: (MarketAsset & { price: number | null })[] = topProducts.map(p => {
         const listings = p.availabilityCount ?? 0;
         const liquidityScore = listings === 0 ? 5
             : Math.min(100, Math.round((Math.log10(listings + 1) / Math.log10(maxListings + 1)) * 100));
-        const cat = p.category?.toLowerCase().includes('sealed') ? 'Sealed'
-            : p.category?.toLowerCase().includes('graded') ? 'Graded'
-            : 'Raw';
+        const cat = 'Sealed';
 
         return {
             id: p.id,
@@ -193,11 +192,37 @@ export default async function MarketPage() {
         .sort((a, b) => (a.change30D ?? 0) - (b.change30D ?? 0))
         .slice(0, 5);
 
-    const liquidityBoard: MarketAsset[] = withMetrics
+    const liquidityBoard: MarketAsset[] = [...withMetrics]
         .sort((a, b) => b.activeListings - a.activeListings)
         .slice(0, 10);
 
-    // ── 7. Era Heatmap ────────────────────────────────────────────
+    // ── 7. Discover Stronger Assets ───────────────────────────────
+    const discoverAssets: DiscoverAsset[] = topProducts.map(p => {
+        const listings = p.availabilityCount ?? 0;
+        const liquidityScore = listings === 0 ? 5
+            : Math.min(100, Math.round((Math.log10(listings + 1) / Math.log10(maxListings + 1)) * 100));
+        const cat = 'Sealed';
+        const momentum30D = calculatePriceChange(p.priceHistory, 30);
+        const momentum12M = calculatePriceChange(p.priceHistory, 365);
+        const nexfolioScore = calculateNexfolioScore(p, p.priceHistory);
+        const normMomentum = momentum30D === null ? 50
+            : Math.min(100, Math.max(0, ((momentum30D + 30) / 60) * 100));
+        const discoverScore = Math.round(
+            nexfolioScore * 0.40 + normMomentum * 0.35 + liquidityScore * 0.25
+        );
+        return {
+            id: p.id, name: p.name,
+            category: cat as 'Sealed' | 'Graded' | 'Raw',
+            price: p.price,
+            momentum30D, momentum12M,
+            liquidityScore, activeListings: listings,
+            nexfolioScore, discoverScore,
+            imageUrl: p.imageUrl ?? null,
+        };
+    }).filter(a => a.momentum30D === null || Math.abs(a.momentum30D) <= 500)
+      .sort((a, b) => b.discoverScore - a.discoverScore);
+
+    // ── 8. Era Heatmap ────────────────────────────────────────────
     const eraPerformance: EraPerformance[] = ERAS.map(({ era, min, max }) => {
         const eraProds = topProducts.filter(p => {
             const y = p.releaseYear;
@@ -222,6 +247,61 @@ export default async function MarketPage() {
             trend: perf3M > 1 ? 'up' : perf3M < -1 ? 'down' : 'flat',
         } satisfies EraPerformance;
     }).filter(Boolean) as EraPerformance[];
+
+    // ── 9. 7-Day Price Breakouts ──────────────────────────────────
+    const breakouts: PriceBreakout[] = topProducts
+        .map(p => {
+            const ch7  = calculatePriceChange(p.priceHistory, 7);
+            const ch30 = calculatePriceChange(p.priceHistory, 30);
+            if (ch7 === null || ch7 <= 20 || ch7 > 500) return null;
+            const cat = p.category?.toLowerCase().includes('sealed') ? 'Sealed'
+                : p.category?.toLowerCase().includes('graded') ? 'Graded'
+                : 'Raw';
+            return {
+                id: p.id,
+                name: p.name,
+                category: cat as 'Sealed' | 'Graded' | 'Raw',
+                price: p.price,
+                change7D: Number(ch7.toFixed(1)),
+                change30D: ch30 != null ? Number(ch30.toFixed(1)) : null,
+                activeListings: p.availabilityCount ?? 0,
+                imageUrl: p.imageUrl ?? null,
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => (b as PriceBreakout).change7D - (a as PriceBreakout).change7D)
+        .slice(0, 8) as PriceBreakout[];
+
+    // ── 10. Trending Sets ─────────────────────────────────────────
+    const avg = (arr: number[]) => arr.reduce((a, b) => a + b, 0) / arr.length;
+    const expansionMap: Record<string, typeof topProducts> = {};
+    for (const p of topProducts) {
+        const exp = p.expansion || 'Unknown';
+        if (!expansionMap[exp]) expansionMap[exp] = [];
+        expansionMap[exp].push(p);
+    }
+    const trendingSets: TrendingSet[] = Object.entries(expansionMap)
+        .map(([expansion, prods]) => {
+            const raw30D = prods.map(p => calculatePriceChange(p.priceHistory, 30)).filter((v): v is number => v !== null);
+            const raw12M = prods.map(p => calculatePriceChange(p.priceHistory, 365)).filter((v): v is number => v !== null);
+            // Remove extreme outliers (>200% or <-80%) caused by bad/sparse price history
+            const changes30D = raw30D.filter(v => v > -80 && v < 200);
+            const changes12M = raw12M.filter(v => v > -80 && v < 500);
+            if (changes30D.length < 2) return null;
+            const prices = prods.filter(p => p.price != null).map(p => p.price!);
+            return {
+                expansion,
+                releaseYear: prods[0].releaseYear ?? undefined,
+                productCount: prods.length,
+                avgChange30D: Number(avg(changes30D).toFixed(1)),
+                avgChange12M: changes12M.length > 0 ? Number(avg(changes12M).toFixed(1)) : null,
+                avgPrice: prices.length > 0 ? Number(avg(prices).toFixed(2)) : null,
+            };
+        })
+        .filter(Boolean)
+        .filter((s) => Math.abs((s as TrendingSet).avgChange30D) > 0.1)
+        .sort((a, b) => Math.abs((b as TrendingSet).avgChange30D) - Math.abs((a as TrendingSet).avgChange30D))
+        .slice(0, 10) as TrendingSet[];
 
     // ── Render ────────────────────────────────────────────────────
     return (
@@ -250,6 +330,9 @@ export default async function MarketPage() {
                 gainers={gainers}
                 decliners={decliners}
                 liquidityBoard={liquidityBoard}
+                discoverAssets={discoverAssets}
+                trendingSets={trendingSets}
+                breakouts={breakouts}
             />
         </div>
     );

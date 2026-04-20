@@ -235,7 +235,6 @@ export default async function DashboardPage() {
 
     const marketSnapshot: MarketSnapshotData = {
         sealedIndex12M,
-        gradedIndex12M: 0, // Graded tracking coming soon
         marketLiquidityTrend,
     };
 
@@ -260,18 +259,6 @@ export default async function DashboardPage() {
                     <PortfolioMoversCards data={topMovers} />
                 </div>
 
-                {/* 5. Portfolio Allocation + Risk Snapshot */}
-                <div className="col-span-12 lg:col-span-8">
-                    <PortfolioAllocation data={allocationData} />
-                </div>
-                <div className="col-span-12 lg:col-span-4">
-                    <RiskSnapshot data={riskMetrics} />
-                </div>
-
-                {/* 5. Market Snapshot */}
-                <div className="col-span-12">
-                    <MarketSnapshot data={marketSnapshot} />
-                </div>
 
             </div>
         </div>

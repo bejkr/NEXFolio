@@ -1,19 +1,21 @@
 'use client';
 
 import React from 'react';
+import { LanguageProvider } from '@/context/LanguageContext';
 import { LandingHeader } from './LandingHeader';
 import { Hero } from './Hero';
-import { ProblemSolution } from './ProblemSolution';
 import { HowItWorks } from './HowItWorks';
 import { FeaturesGrid } from './FeaturesGrid';
-import { InsightsSection, SocialProof } from './SocialProof';
+import { SocialProof } from './SocialProof';
 import { Pricing } from './Pricing';
 import { ProductMarquee } from './ProductMarquee';
 import { CTASection, LandingFooter } from './LandingFooter';
 import { ScrollReveal } from './ScrollReveal';
+import { ValueProps } from './ValueProps';
 
 export default function LandingPage() {
     return (
+        <LanguageProvider>
         <div className="bg-[#0E1116] min-h-screen text-[#f3f4f6] relative">
             {/* Soft global background glows */}
             <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
@@ -28,11 +30,8 @@ export default function LandingPage() {
                 <div id="how-it-works">
                     <HowItWorks />
                 </div>
-                <div id="problem-solution">
-                    <ProblemSolution />
-                </div>
                 <FeaturesGrid />
-                <InsightsSection />
+                <ValueProps />
                 <div id="pricing">
                     <Pricing />
                 </div>
@@ -41,5 +40,6 @@ export default function LandingPage() {
             </main>
             <LandingFooter />
         </div>
+        </LanguageProvider>
     );
 }

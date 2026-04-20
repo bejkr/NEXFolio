@@ -1,10 +1,95 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createAdminClient } from '@supabase/supabase-js';
 import { calculateNexfolioScore, calculatePriceChange } from '@/lib/scoring';
 import { PortfolioSignal } from '@/components/PortfolioSignals';
+import Anthropic from '@anthropic-ai/sdk';
 
 export const dynamic = 'force-dynamic';
+
+const anthropic = new Anthropic();
+
+const AI_SYSTEM_PROMPT = `You are a TCG (Trading Card Game) portfolio analyst for Nexfolio. Analyze the user's portfolio and return 2-4 actionable signals that complement rule-based signals.
+
+Focus on patterns rules can't catch: cross-card correlations, expansion trends, unusual risk/reward combos, portfolio health insights.
+
+Return ONLY a valid JSON array — no markdown, no explanation:
+[
+  {
+    "id": "ai-1",
+    "kind": "profit" | "risk" | "momentum" | "warn" | "info",
+    "priority": 1 | 2 | 3,
+    "title": "Max 30 chars",
+    "body": "One actionable sentence, max 120 chars.",
+    "tag": "Card name or null"
+  }
+]
+
+Priority: 1=urgent, 2=consider acting, 3=informational.`;
+
+function getAdminClient() {
+    return createAdminClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+}
+
+function isToday(date: Date): boolean {
+    const now = new Date();
+    return (
+        date.getUTCFullYear() === now.getUTCFullYear() &&
+        date.getUTCMonth() === now.getUTCMonth() &&
+        date.getUTCDate() === now.getUTCDate()
+    );
+}
+
+async function getCachedAiSignals(userId: string): Promise<PortfolioSignal[] | null> {
+    const admin = getAdminClient();
+    const { data } = await admin
+        .from('ai_signal_cache')
+        .select('signals, generated_at')
+        .eq('user_id', userId)
+        .single();
+
+    if (!data) return null;
+    if (!isToday(new Date(data.generated_at))) return null;
+    return data.signals as PortfolioSignal[];
+}
+
+async function saveAiSignals(userId: string, signals: PortfolioSignal[]) {
+    const admin = getAdminClient();
+    await admin.from('ai_signal_cache').upsert({
+        user_id: userId,
+        signals,
+        generated_at: new Date().toISOString(),
+    });
+}
+
+async function generateAiSignals(portfolioSummary: string): Promise<PortfolioSignal[]> {
+    const message = await anthropic.messages.create({
+        model: 'claude-haiku-4-5',
+        max_tokens: 1024,
+        system: [
+            {
+                type: 'text',
+                text: AI_SYSTEM_PROMPT,
+                cache_control: { type: 'ephemeral' },
+            },
+        ],
+        messages: [
+            {
+                role: 'user',
+                content: portfolioSummary,
+            },
+        ],
+    });
+
+    const text = message.content[0].type === 'text' ? message.content[0].text : '[]';
+    const parsed = JSON.parse(text);
+    if (!Array.isArray(parsed)) return [];
+    return parsed as PortfolioSignal[];
+}
 
 export async function GET() {
     const supabase = createClient();
@@ -48,7 +133,9 @@ export async function GET() {
         value: totalValue > 0 ? Number(((val / totalValue) * 100).toFixed(1)) : 0,
     }));
 
+    // Rule-based signals
     const rawSignals: PortfolioSignal[] = [];
+    const assetSummaries: string[] = [];
 
     for (const asset of assets) {
         const price  = asset.product?.price ?? asset.currentValue;
@@ -105,6 +192,14 @@ export async function GET() {
                 body: `Score ${score}/100 — strong scarcity and momentum fundamentals.`,
                 tag, href });
         }
+
+        assetSummaries.push(
+            `${asset.name} (${asset.category}, ${asset.product?.expansion ?? asset.set}): ` +
+            `price €${price.toFixed(2)}, qty ${qty}, PnL ${pnlPct.toFixed(1)}%, ` +
+            `30D change ${ch30 != null ? `${ch30.toFixed(1)}%` : 'n/a'}, ` +
+            `12M change ${ch12M != null ? `${ch12M.toFixed(1)}%` : 'n/a'}, ` +
+            `score ${score}/100`
+        );
     }
 
     // Concentration Risk
@@ -115,6 +210,28 @@ export async function GET() {
             body: `${top.name} makes up ${top.value}% of your portfolio — consider diversifying.` });
     }
 
-    const signals = rawSignals.sort((a, b) => a.priority - b.priority).slice(0, 10);
-    return NextResponse.json(signals);
+    // AI signals (cached per day)
+    let aiSignals: PortfolioSignal[] = [];
+    try {
+        const cached = await getCachedAiSignals(user.id);
+        if (cached) {
+            aiSignals = cached;
+        } else {
+            const portfolioSummary =
+                `Portfolio: ${assets.length} cards, total value €${totalValue.toFixed(2)}\n` +
+                `Allocation: ${allocationData.map(a => `${a.name} ${a.value}%`).join(', ')}\n\n` +
+                `Assets:\n${assetSummaries.join('\n')}`;
+
+            aiSignals = await generateAiSignals(portfolioSummary);
+            await saveAiSignals(user.id, aiSignals);
+        }
+    } catch {
+        // AI signals are non-critical — degrade gracefully
+    }
+
+    const allSignals = [...rawSignals, ...aiSignals]
+        .sort((a, b) => a.priority - b.priority)
+        .slice(0, 10);
+
+    return NextResponse.json(allSignals);
 }

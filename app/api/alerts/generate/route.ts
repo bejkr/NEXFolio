@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase/server';
 const PRICE_ALERT_THRESHOLD = 0.05;  // 5%  → info
 const PRICE_ALERT_WARN      = 0.10;  // 10% → warning
 const PRICE_ALERT_CRITICAL  = 0.20;  // 20% → critical
-const DEDUP_WINDOW_H        = 24;    // don't re-create the same alert within 24h
+const DEDUP_WINDOW_H        = 24;    // don't re-create unread alert within 24h
+const DEDUP_READ_WINDOW_H   = 168;   // don't re-create already-read alert within 7 days
 
 // POST /api/alerts/generate
 // Checks the authenticated user's portfolio for significant price changes
@@ -33,15 +34,29 @@ export async function POST() {
 
         const now = new Date();
         const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
-        const dedupWindowStart   = new Date(now.getTime() - DEDUP_WINDOW_H * 60 * 60 * 1000);
+        const dedupWindowStart     = new Date(now.getTime() - DEDUP_WINDOW_H * 60 * 60 * 1000);
+        const dedupReadWindowStart = new Date(now.getTime() - DEDUP_READ_WINDOW_H * 60 * 60 * 1000);
 
         // ── Existing alerts in dedup window (to avoid duplicates) ───────
-        const existingAlerts = await prisma.$queryRaw<{ title: string }[]>`
-            SELECT title FROM "Alert"
-            WHERE "userId" = ${user.id}
-              AND "createdAt" >= ${dedupWindowStart}
-        `;
-        const existingTitles = new Set(existingAlerts.map(a => a.title));
+        // Fetch unread alerts from last 24h + all read alerts from last 7 days
+        const [recentUnread, recentRead] = await Promise.all([
+            prisma.$queryRaw<{ title: string }[]>`
+                SELECT title FROM "Alert"
+                WHERE "userId" = ${user.id}
+                  AND "createdAt" >= ${dedupWindowStart}
+                  AND read = false
+            `,
+            prisma.$queryRaw<{ title: string }[]>`
+                SELECT title FROM "Alert"
+                WHERE "userId" = ${user.id}
+                  AND "createdAt" >= ${dedupReadWindowStart}
+                  AND read = true
+            `,
+        ]);
+        const existingTitles = new Set([
+            ...recentUnread.map(a => a.title),
+            ...recentRead.map(a => a.title),
+        ]);
 
         const created: string[] = [];
 

@@ -5,219 +5,115 @@ export const dynamic = 'force-dynamic';
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { Mail, Lock, User, Loader2, Eye, EyeOff } from "lucide-react"
+import { Mail, Lock, Loader2, Eye, EyeOff } from "lucide-react"
+import Link from "next/link"
 
 export default function LoginPage() {
-    const [isLogin, setIsLogin] = useState(true)
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
-    const [confirmPassword, setConfirmPassword] = useState("")
-    const [fullName, setFullName] = useState("")
+    const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
-    const [successMsg, setSuccessMsg] = useState<string | null>(null)
-
-    const [showPassword, setShowPassword] = useState(false)
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
     const router = useRouter()
     const supabase = createClient()
 
-    const handleAuth = async (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsLoading(true)
         setError(null)
-        setSuccessMsg(null)
 
-        if (isLogin) {
-            const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            })
-            if (error) {
-                setError(error.message)
-            } else {
-                // Fetch user role
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', (await supabase.auth.getUser()).data.user?.id)
-                    .single()
-
-                if (profile?.role === 'admin') {
-                    router.push("/admin/settings")
-                } else {
-                    router.push("/dashboard")
-                }
-                router.refresh()
-            }
+        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        if (error) {
+            setError(error.message)
         } else {
-            if (password !== confirmPassword) {
-                setError("Passwords do not match.")
-                setIsLoading(false)
-                return
-            }
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', (await supabase.auth.getUser()).data.user?.id)
+                .single()
 
-            const { error } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        full_name: fullName,
-                    },
-                },
-            })
-            if (error) {
-                setError(error.message)
-            } else {
-                setSuccessMsg("Registration successful! Please check your email to confirm your account.")
-                setIsLogin(true)
-            }
+            router.push(profile?.role === 'admin' ? "/admin/settings" : "/dashboard")
+            router.refresh()
         }
         setIsLoading(false)
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-zinc-950 p-4 font-sans text-zinc-100">
-            <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-xl">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#151A21] p-4 font-sans text-zinc-100">
+            <div className="w-full max-w-md mb-4">
+                <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#00E599] transition-colors">
+                    ← Back to website
+                </Link>
+            </div>
+            <div className="w-full max-w-md bg-[#0E1116] border border-white/10 rounded-2xl p-8 shadow-xl">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-emerald-600">
-                        Nexfolio
-                    </h1>
-                    <p className="text-zinc-400 mt-2">
-                        {isLogin ? "Sign in to your account" : "Create a new account"}
-                    </p>
+                    <Link href="/" className="text-3xl font-extrabold tracking-tight">
+                        <span className="text-[#00E599]">NEX</span>
+                        <span className="text-white">folio</span>
+                    </Link>
+                    <p className="text-gray-500 mt-2 text-sm">Sign in to your account</p>
                 </div>
 
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-3 rounded-lg mb-4">
+                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-3 rounded-xl mb-5">
                         {error}
                     </div>
                 )}
 
-                {successMsg && (
-                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-sm p-3 rounded-lg mb-4">
-                        {successMsg}
-                    </div>
-                )}
-
-                <form onSubmit={handleAuth} className="space-y-4">
-                    {!isLogin && (
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-300">Full Name</label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-3 h-5 w-5 text-zinc-500" />
-                                <input
-                                    type="text"
-                                    required
-                                    value={fullName}
-                                    onChange={(e) => setFullName(e.target.value)}
-                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 pl-10 pr-4 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                                    placeholder="John Doe"
-                                />
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-300">Email</label>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-gray-300">Email</label>
                         <div className="relative">
-                            <Mail className="absolute left-3 top-3 h-5 w-5 text-zinc-500" />
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                             <input
                                 type="email"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 pl-10 pr-4 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                                placeholder="john@example.com"
+                                placeholder="you@example.com"
+                                className="w-full bg-[#0E1116] border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#00E599]/30 focus:border-[#00E599]/40 transition-all text-sm"
                             />
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium text-zinc-300">Password</label>
+                    <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-gray-300">Password</label>
                         <div className="relative">
-                            <Lock className="absolute left-3 top-3 h-5 w-5 text-zinc-500" />
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                             <input
                                 type={showPassword ? "text" : "password"}
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 pl-10 pr-10 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
                                 placeholder="••••••••"
+                                className="w-full bg-[#0E1116] border border-white/10 rounded-xl py-3 pl-10 pr-10 text-white placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-[#00E599]/30 focus:border-[#00E599]/40 transition-all text-sm"
                             />
                             <button
                                 type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-3 text-zinc-500 hover:text-zinc-300 transition-colors"
-                                title="Show/hide password"
+                                onClick={() => setShowPassword(v => !v)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
                             >
-                                {showPassword ? (
-                                    <EyeOff className="h-5 w-5" />
-                                ) : (
-                                    <Eye className="h-5 w-5" />
-                                )}
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </button>
                         </div>
                     </div>
 
-                    {!isLogin && (
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium text-zinc-300">Confirm Password</label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-3 h-5 w-5 text-zinc-500" />
-                                <input
-                                    type={showConfirmPassword ? "text" : "password"}
-                                    required
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="w-full bg-zinc-800 border border-zinc-700 rounded-lg py-2.5 pl-10 pr-10 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all"
-                                    placeholder="••••••••"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute right-3 top-3 text-zinc-500 hover:text-zinc-300 transition-colors"
-                                    title="Show/hide password"
-                                >
-                                    {showConfirmPassword ? (
-                                        <EyeOff className="h-5 w-5" />
-                                    ) : (
-                                        <Eye className="h-5 w-5" />
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 rounded-lg transition-colors flex items-center justify-center mt-6 disabled:opacity-70"
+                        className="w-full bg-[#00E599] hover:bg-[#00cc88] text-black font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 mt-2 disabled:opacity-60 text-sm"
                     >
-                        {isLoading ? (
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : isLogin ? (
-                            "Sign In"
-                        ) : (
-                            "Sign Up"
-                        )}
+                        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
                     </button>
                 </form>
 
-                <div className="mt-6 text-center text-sm text-zinc-400">
-                    {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-                    <button
-                        type="button"
-                        onClick={() => {
-                            setIsLogin(!isLogin)
-                            setError(null)
-                        }}
-                        className="text-emerald-500 hover:text-emerald-400 font-medium transition-colors"
-                    >
-                        {isLogin ? "Sign up" : "Sign in"}
-                    </button>
-                </div>
+                <p className="mt-6 text-center text-sm text-gray-600">
+                    Don't have an account?{" "}
+                    <Link href="/register" className="text-[#00E599] hover:opacity-80 font-medium transition-opacity">
+                        Sign up
+                    </Link>
+                </p>
             </div>
         </div>
     )

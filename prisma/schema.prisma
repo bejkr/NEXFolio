@@ -98,3 +98,4 @@ model WatchlistItem {
   @@unique([userId, productId])
   @@index([userId])
 }
+

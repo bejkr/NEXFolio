@@ -73,7 +73,7 @@ export default function PricingPage() {
                                     className={`relative flex flex-col rounded-2xl border p-8 transition-all ${
                                         plan.highlighted
                                             ? 'bg-[#00E599]/5 border-[#00E599]/40 shadow-[0_0_60px_rgba(0,229,153,0.08)]'
-                                            : 'bg-white/[0.02] border-white/8'
+                                            : 'bg-white/[0.02] border-[rgba(255,255,255,0.06)]'
                                     }`}
                                 >
                                     {plan.badge && (

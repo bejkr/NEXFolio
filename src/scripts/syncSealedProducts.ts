@@ -7,10 +7,20 @@ import { delay } from '../utils/delay';
 import { cardmarketService, Expansion, ParsedProduct } from '../services/cardmarketService';
 import { productService, ProductData } from '../services/productService';
 
-// Max 2 requests per second globally across the script to be polite
 const limit = pLimit(2);
-
 const RETRY_COUNT = 3;
+
+// Sealed product categories sorted by newest release — mirrors Cardmarket's date_desc view
+const SEALED_CATEGORIES = [
+    { url: 'https://www.cardmarket.com/en/Pokemon/Products/Booster-Boxes?sortBy=date_desc&perSite=30', name: 'Booster Boxes' },
+    { url: 'https://www.cardmarket.com/en/Pokemon/Products/Elite-Trainer-Boxes?sortBy=date_desc&perSite=30', name: 'Elite Trainer Boxes' },
+    { url: 'https://www.cardmarket.com/en/Pokemon/Products/Booster-Bundles?sortBy=date_desc&perSite=30', name: 'Booster Bundles' },
+    { url: 'https://www.cardmarket.com/en/Pokemon/Products/Collections?sortBy=date_desc&perSite=30', name: 'Collections' },
+    { url: 'https://www.cardmarket.com/en/Pokemon/Products/Tins?sortBy=date_desc&perSite=30', name: 'Tins' },
+    { url: 'https://www.cardmarket.com/en/Pokemon/Products/Blister-Packs?sortBy=date_desc&perSite=30', name: 'Blister Packs' },
+    { url: 'https://www.cardmarket.com/en/Pokemon/Products/Special-Collections?sortBy=date_desc&perSite=30', name: 'Special Collections' },
+    { url: 'https://www.cardmarket.com/en/Pokemon/Products/Box-Sets?sortBy=date_desc&perSite=30', name: 'Box Sets' },
+];
 
 async function fetchWithRetry<T>(operation: () => Promise<T>, url: string, retries = RETRY_COUNT): Promise<T> {
     try {
@@ -18,7 +28,7 @@ async function fetchWithRetry<T>(operation: () => Promise<T>, url: string, retri
     } catch (error) {
         if (retries > 0) {
             logger.warn(`Retrying fetch for ${url}. Attempts left: ${retries - 1}`);
-            await delay(1000); // 1s backoff
+            await delay(1000);
             return fetchWithRetry(operation, url, retries - 1);
         }
         logger.error(`Max retries reached for ${url}`);
@@ -26,13 +36,43 @@ async function fetchWithRetry<T>(operation: () => Promise<T>, url: string, retri
     }
 }
 
+async function syncCategory(category: { url: string; name: string }) {
+    try {
+        logger.info(`Syncing category: ${category.name}`);
+        const result = await limit(() => fetchWithRetry(
+            () => cardmarketService.fetchCategoryGridPage(category.url),
+            category.url
+        ));
+
+        if (result.products.length === 0) {
+            logger.warn(`No products found in category ${category.name}`);
+            return;
+        }
+
+        logger.info(`Found ${result.products.length} products in ${category.name}. Upserting...`);
+
+        for (const sp of result.products) {
+            const productData: ProductData = {
+                externalId: sp.externalId,
+                name: sp.name,
+                expansion: sp.expansionName || category.name,
+                category: 'sealed',
+                source: 'cardmarket',
+                imageUrl: sp.imageUrl,
+                cardmarketUrl: sp.url,
+            };
+            await productService.upsertProduct(productData);
+        }
+    } catch (error: any) {
+        logger.error(`Skipping category ${category.name} due to error: ${error.message}`);
+    }
+}
+
 async function syncExpansion(expansion: Expansion) {
     try {
-        const url = expansion.url;
-        // Schedule the fetch through p-limit
         const productsRaw = await limit(() => fetchWithRetry(
-            () => cardmarketService.fetchProductsByExpansion(url),
-            url
+            () => cardmarketService.fetchProductsByExpansion(expansion.url),
+            expansion.url
         ));
 
         const sealedProducts = cardmarketService.filterSealedProducts(productsRaw);
@@ -54,7 +94,6 @@ async function syncExpansion(expansion: Expansion) {
                 imageUrl: sp.imageUrl,
                 cardmarketUrl: sp.url,
             };
-
             await productService.upsertProduct(productData);
         }
     } catch (error: any) {
@@ -66,68 +105,51 @@ async function main() {
     logger.info('Starting Cardmarket Sealed Product Sync...');
 
     try {
-        // 1. Fetch all expansions
-        logger.info('Fetching expansions list...');
-        const expansions = await fetchWithRetry(
-            () => cardmarketService.fetchExpansions(),
-            'Expansions Index'
-        );
-
-        if (expansions.length === 0) {
-            logger.error('No expansions found. Check Cardmarket DOM structure or IP ban status.');
-            return;
-        }
-
-        logger.info(`Found ${expansions.length} expansions. Starting sync...`);
-
-        // 2. Iterate and sync each
         const isFullSync = process.argv.includes('--full');
-        const expansionsToSync = isFullSync ? expansions : expansions.slice(-20);
-        
-        if (isFullSync) {
-            logger.info(`Full sync enabled. Syncing all ${expansions.length} expansions...`);
-        } else {
-            logger.info(`Syncing only the 20 most recent expansions to avoid Cloudflare blocks. Use --full to sync all.`);
-        }
+        const expansionArg = process.argv.find(a => a.startsWith('--expansion='))?.replace('--expansion=', '');
 
-        for (const expansion of expansionsToSync) {
-            await syncExpansion(expansion);
-
-            // Polite delay between expansions - increased to 10s for stability in CI
-            await delay(10000);
-        }
-
-        // 3. Optional: Sync specific categories that might not be in the expansion list
-        const EXTRA_CATEGORIES = [
-            { url: 'https://www.cardmarket.com/en/Pokemon/Products/Box-Sets', name: 'Box Sets' },
-            { url: 'https://www.cardmarket.com/en/Pokemon/Products/Tins', name: 'Tins' },
-            { url: 'https://www.cardmarket.com/en/Pokemon/Products/Special-Collections', name: 'Special Collections' }
-        ];
-
-        logger.info('Starting Category-specific sync for Extra Categories...');
-        for (const category of EXTRA_CATEGORIES) {
-            logger.info(`Syncing category: ${category.name}`);
-            const result = await limit(() => fetchWithRetry(
-                () => cardmarketService.fetchCategoryGridPage(category.url),
-                category.url
-            ));
-
-            const sealedProducts = cardmarketService.filterSealedProducts(result.products);
-            logger.info(`Found ${sealedProducts.length} sealed products in category ${category.name}. Upserting...`);
-
-            for (const sp of sealedProducts) {
-                const productData: ProductData = {
-                    externalId: sp.externalId,
-                    name: sp.name,
-                    expansion: sp.expansionName || 'Special',
-                    category: 'sealed',
-                    source: 'cardmarket',
-                    imageUrl: sp.imageUrl,
-                    cardmarketUrl: sp.url,
-                };
-                await productService.upsertProduct(productData);
+        if (expansionArg) {
+            // Targeted sync: find expansion by name and sync it
+            logger.info(`Fetching expansions to find: "${expansionArg}"...`);
+            const expansions = await fetchWithRetry(
+                () => cardmarketService.fetchExpansions(),
+                'Expansions Index'
+            );
+            const matched = expansions.filter(e =>
+                e.name.toLowerCase().includes(expansionArg.toLowerCase())
+            );
+            if (matched.length === 0) {
+                logger.error(`No expansion found matching: "${expansionArg}"`);
+                return;
             }
-            await delay(5000);
+            logger.info(`Found ${matched.length} match(es): ${matched.map(e => e.name).join(', ')}`);
+            for (const expansion of matched) {
+                await syncExpansion(expansion);
+                await delay(10000);
+            }
+        } else if (isFullSync) {
+            // Full sync: all expansions alphabetically
+            logger.info('Fetching expansions list...');
+            const expansions = await fetchWithRetry(
+                () => cardmarketService.fetchExpansions(),
+                'Expansions Index'
+            );
+            if (expansions.length === 0) {
+                logger.error('No expansions found. Check Cardmarket DOM structure or IP ban status.');
+                return;
+            }
+            logger.info(`Full sync: ${expansions.length} expansions...`);
+            for (const expansion of expansions) {
+                await syncExpansion(expansion);
+                await delay(10000);
+            }
+        } else {
+            // Default: category-based sync sorted by newest release (date_desc)
+            logger.info(`Syncing ${SEALED_CATEGORIES.length} categories sorted by newest release...`);
+            for (const category of SEALED_CATEGORIES) {
+                await syncCategory(category);
+                await delay(10000);
+            }
         }
 
         logger.info('Sync completed successfully!');
@@ -140,5 +162,4 @@ async function main() {
     }
 }
 
-// Execute
 main();

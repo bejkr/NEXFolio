@@ -13,7 +13,7 @@ export const LandingDashboardPreview: React.FC = () => {
       <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-[#00E599]/10 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Main Container */}
-      <div className="bg-[#151A21] border border-white/10 rounded-2xl overflow-hidden shadow-2xl premium-glow">
+      <div className="bg-[#151A21] border border-[rgba(255,255,255,0.06)] rounded-2xl overflow-hidden shadow-2xl premium-glow">
         {/* Top bar (Fake browser/app header) */}
         <div className="h-12 border-b border-white/5 bg-black/20 flex items-center px-6 gap-2">
             <div className="w-3 h-3 rounded-full bg-red-500/50" />

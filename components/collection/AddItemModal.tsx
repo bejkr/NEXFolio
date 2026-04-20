@@ -117,7 +117,7 @@ export function AddItemModal({ isOpen, onClose, onAdd, initialProduct }: Props) 
             userId: '', // Will be set by API
             name: formData.name,
             set: formData.set,
-            category: formData.category as 'Sealed' | 'Graded' | 'Raw',
+            category: formData.category,
             condition: '',
             costBasis: Number(formData.costBasis),
             currentValue: formData.currentValue,
@@ -246,8 +246,6 @@ export function AddItemModal({ isOpen, onClose, onAdd, initialProduct }: Props) 
                                     className="w-full bg-[#0E1116] border border-[rgba(255,255,255,0.06)] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-primary appearance-none"
                                 >
                                     <option value="Sealed">Sealed</option>
-                                    <option value="Graded">Graded</option>
-                                    <option value="Raw">Raw</option>
                                 </select>
                             </div>
 

@@ -28,7 +28,7 @@ export function MarketFilters() {
                 <div>
                     <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">Category</label>
                     <div className="space-y-2">
-                        {['Sealed', 'Graded', 'Raw'].map((category) => (
+                        {['Sealed'].map((category) => (
                             <label key={category} className="flex items-center space-x-2 cursor-pointer group">
                                 <div className="w-4 h-4 rounded border border-gray-600 bg-[#151A21] group-hover:border-primary transition-colors flex items-center justify-center">
                                     {/* Checkbox active state would go here */}

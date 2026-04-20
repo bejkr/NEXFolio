@@ -20,7 +20,6 @@ export function MarketTrendChart({ data, title = 'Market Trend Index', subtitle 
     const sliceCount = sliceMap[timeframe] ?? data.length;
     const filteredData = data.slice(-sliceCount);
 
-    const showGraded = data.some(d => d.gradedIndex !== undefined && d.gradedIndex !== 0);
 
     return (
         <Card className="bg-[#0E1116] border-[rgba(255,255,255,0.06)] h-full flex flex-col">
@@ -57,10 +56,6 @@ export function MarketTrendChart({ data, title = 'Market Trend Index', subtitle 
                                     <stop offset="5%" stopColor="#00E599" stopOpacity={0.3} />
                                     <stop offset="95%" stopColor="#00E599" stopOpacity={0} />
                                 </linearGradient>
-                                <linearGradient id="colorGraded" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                </linearGradient>
                             </defs>
                             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
                             <XAxis
@@ -84,29 +79,15 @@ export function MarketTrendChart({ data, title = 'Market Trend Index', subtitle 
                                 labelStyle={{ color: '#9ca3af', marginBottom: '4px' }}
                                 formatter={(value: number) => [`${value}`, undefined]}
                             />
-                            {showGraded && (
-                                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', color: '#9ca3af' }} />
-                            )}
                             <Line
                                 type="monotone"
                                 dataKey="sealedIndex"
-                                name={showGraded ? 'Sealed Index' : 'Index'}
+                                name="Index"
                                 stroke="#00E599"
                                 strokeWidth={3}
                                 dot={false}
                                 activeDot={{ r: 6, fill: '#00E599', stroke: '#151A21', strokeWidth: 2 }}
                             />
-                            {showGraded && (
-                                <Line
-                                    type="monotone"
-                                    dataKey="gradedIndex"
-                                    name="Graded Index"
-                                    stroke="#3b82f6"
-                                    strokeWidth={3}
-                                    dot={false}
-                                    activeDot={{ r: 6, fill: '#3b82f6', stroke: '#151A21', strokeWidth: 2 }}
-                                />
-                            )}
                         </LineChart>
                     </ResponsiveContainer>
                 )}

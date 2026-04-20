@@ -88,9 +88,36 @@ function releasePage(index: number): void {
     if (next) next();
 }
 
+function hasPriceData(html: string): boolean {
+    return html.includes('info-list-container') || html.includes('Trend Price') || html.includes('Price Trend');
+}
+
+async function fetchNativeHtml(url: string, cookieString: string, userAgent: string): Promise<string> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+    try {
+        const response = await fetch(url, {
+            signal: controller.signal,
+            headers: {
+                'User-Agent': userAgent,
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Cookie': cookieString,
+                'Referer': 'https://www.cardmarket.com/en/Pokemon',
+            },
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        return await response.text();
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
 /**
- * Fetch HTML via plain axios + cookies (no Puppeteer, no CDP detection).
- * Requires a cookie string from Brave browser.
+ * Fetch HTML with 3-tier fallback to minimise ScrapingBee credit usage:
+ *   Tier 1 — native fetch with cookies      (0 credits)
+ *   Tier 2 — ScrapingBee, no render_js      (1 credit)
+ *   Tier 3 — ScrapingBee, render_js         (5 credits)  ← last resort
  */
 async function fetchHtmlWithCookies(url: string, cacheTTLMs: number = 0): Promise<string> {
     // Check cache first
@@ -124,48 +151,62 @@ async function fetchHtmlWithCookies(url: string, cacheTTLMs: number = 0): Promis
         : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36';
 
     const scrapingBeeKey = process.env.SCRAPINGBEE_KEY;
+    let html: string | null = null;
 
-    let html: string;
+    // Tier 1: native fetch with cookies — 0 ScrapingBee credits
+    try {
+        logger.info(`[Tier 1] Native fetch: ${url}`);
+        const result = await fetchNativeHtml(url, cookieString, userAgent);
+        if (!result.includes('Just a moment...')) {
+            html = result;
+        } else {
+            logger.warn(`[Tier 1] Cloudflare challenge — escalating`);
+        }
+    } catch (e: any) {
+        logger.warn(`[Tier 1] Failed: ${e.message} — escalating`);
+    }
 
-    if (scrapingBeeKey) {
-        logger.info(`Fetching via ScrapingBee: ${url}`);
+    // Tier 2: ScrapingBee without render_js — 1 credit
+    if (!html && scrapingBeeKey) {
+        try {
+            logger.info(`[Tier 2] ScrapingBee (no render_js, ~1 credit): ${url}`);
+            const response = await axios.get('https://app.scrapingbee.com/api/v1', {
+                params: {
+                    api_key: scrapingBeeKey,
+                    url,
+                    render_js: 'false',
+                    country_code: 'de',
+                },
+                timeout: 30000,
+            });
+            const result = response.data as string;
+            if (!result.includes('Just a moment...') && hasPriceData(result)) {
+                html = result;
+            } else {
+                logger.warn(`[Tier 2] CF challenge or no price data — escalating`);
+            }
+        } catch (e: any) {
+            logger.warn(`[Tier 2] Failed: ${e.message} — escalating`);
+        }
+    }
 
+    // Tier 3: ScrapingBee with render_js — 5 credits, last resort
+    if (!html && scrapingBeeKey) {
+        logger.info(`[Tier 3] ScrapingBee (render_js, ~5 credits): ${url}`);
         const response = await axios.get('https://app.scrapingbee.com/api/v1', {
             params: {
                 api_key: scrapingBeeKey,
                 url,
-                render_js: 'true', // Cardmarket prices are dynamically loaded via JS
-                premium_proxy: 'true',
-                country_code: 'de', // EU proxy for correct EUR prices
+                render_js: 'true',
+                country_code: 'de',
             },
             timeout: 60000,
         });
+        html = response.data as string;
+    }
 
-        html = response.data;
-    } else {
-        logger.info(`Fetching via native fetch: ${url}`);
-
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000);
-
-        const response = await fetch(url, {
-            signal: controller.signal,
-            headers: {
-                'User-Agent': userAgent,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Cookie': cookieString,
-                'Referer': 'https://www.cardmarket.com/en/Pokemon',
-            },
-        });
-
-        clearTimeout(timeout);
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        html = await response.text();
+    if (!html) {
+        throw new Error('All fetch tiers failed — no ScrapingBee key and native fetch blocked. Refresh cookies: npm run sync:cardmarket:cookies');
     }
 
     if (html.includes('Just a moment...')) {

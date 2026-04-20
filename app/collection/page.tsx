@@ -125,7 +125,6 @@ export default function CollectionPage() {
             {/* ── Header ── */}
             <div className="flex flex-col md:flex-row md:items-end justify-between mb-6 gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-white mb-2">Portfolio</h1>
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10 mt-4">
                         <div>
                             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Total Value</p>

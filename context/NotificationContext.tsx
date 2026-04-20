@@ -68,12 +68,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const unreadCount = alerts.filter(a => !a.read).length;
 
     const markAsRead = async (id: string) => {
-        // Optimistic update
         setAlerts(prev => prev.map(a => a.id === id ? { ...a, read: true } : a));
         try {
-            await fetch(`/api/alerts/${id}`, { method: 'PATCH' });
+            const res = await fetch(`/api/alerts/${id}`, { method: 'PATCH' });
+            if (!res.ok) await fetchAlerts();
         } catch {
-            // revert on failure
             await fetchAlerts();
         }
     };
@@ -81,11 +80,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const markAllAsRead = async () => {
         setAlerts(prev => prev.map(a => ({ ...a, read: true })));
         try {
-            await fetch('/api/alerts', {
+            const res = await fetch('/api/alerts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'mark-all-read' }),
             });
+            if (!res.ok) await fetchAlerts();
         } catch {
             await fetchAlerts();
         }

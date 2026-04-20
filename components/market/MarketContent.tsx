@@ -7,11 +7,17 @@ import { MarketMovers } from '@/components/market/MarketMovers';
 import { LiquidityBoard } from '@/components/market/LiquidityBoard';
 import { MarketTrendChart } from '@/components/market/MarketTrendChart';
 import { AvailabilityTable } from '@/components/AvailabilityTable';
+import { DiscoverAssets } from '@/components/market/DiscoverAssets';
+import { TrendingSets } from '@/components/market/TrendingSets';
+import { PriceBreakouts } from '@/components/market/PriceBreakouts';
 import {
     MarketOverviewData,
     EraPerformance,
     MarketAsset,
     MarketTrendData,
+    DiscoverAsset,
+    TrendingSet,
+    PriceBreakout,
 } from '@/lib/mockData';
 
 interface Props {
@@ -21,16 +27,20 @@ interface Props {
     gainers: MarketAsset[];
     decliners: MarketAsset[];
     liquidityBoard: MarketAsset[];
+    discoverAssets: DiscoverAsset[];
+    trendingSets: TrendingSet[];
+    breakouts: PriceBreakout[];
 }
 
 const TABS = [
     { key: 'overview',      label: 'Market Overview' },
+    { key: 'discover',      label: 'Discover' },
     { key: 'availability',  label: 'Availability' },
 ] as const;
 
 type Tab = typeof TABS[number]['key'];
 
-export function MarketContent({ marketOverview, trendData, eraPerformance, gainers, decliners, liquidityBoard }: Props) {
+export function MarketContent({ marketOverview, trendData, eraPerformance, gainers, decliners, liquidityBoard, discoverAssets, trendingSets, breakouts }: Props) {
     const [tab, setTab] = useState<Tab>('overview');
 
     return (
@@ -64,7 +74,15 @@ export function MarketContent({ marketOverview, trendData, eraPerformance, gaine
                         <MarketMovers gainers={gainers} decliners={decliners} />
                     </div>
                     <LiquidityBoard data={liquidityBoard} />
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                        <TrendingSets data={trendingSets} />
+                        <PriceBreakouts data={breakouts} />
+                    </div>
                 </div>
+            )}
+
+            {tab === 'discover' && (
+                <DiscoverAssets data={discoverAssets} />
             )}
 
             {tab === 'availability' && (

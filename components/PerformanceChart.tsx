@@ -67,7 +67,7 @@ export function PerformanceChart({ data: initialData, summary }: PerformanceChar
 
     const filters = ['1D', '7D', '1M', '3M', '6M', 'MAX'];
 
-    const latestValue = summary.totalValue;
+    const latestValue = chartData.length > 0 ? chartData[chartData.length - 1].value : summary.totalValue;
     const startValue = chartData.length > 0 ? chartData[0].value : summary.totalValue;
     const periodChange = latestValue - startValue;
     const periodChangePercent = startValue > 0 ? (periodChange / startValue) * 100 : 0;
@@ -88,7 +88,7 @@ export function PerformanceChart({ data: initialData, summary }: PerformanceChar
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart
                             data={chartData}
-                            margin={{ top: 5, right: 0, left: -20, bottom: 0 }}
+                            margin={{ top: 5, right: 0, left: 10, bottom: 0 }}
                         >
                             <defs>
                                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
@@ -107,15 +107,16 @@ export function PerformanceChart({ data: initialData, summary }: PerformanceChar
                                 minTickGap={30}
                             />
                             <YAxis
-                                width={30}
+                                width={50}
                                 axisLine={false}
                                 tickLine={false}
-                                tick={{ fill: '#6b7280', fontSize: 12 }}
+                                tick={{ fill: '#6b7280', fontSize: 11 }}
                                 tickFormatter={formatYAxis}
+                                tickCount={5}
                                 domain={([dataMin, dataMax]: [number, number]) => {
                                     const range = dataMax - dataMin || dataMax * 0.05 || 100;
-                                    const pad = range * 0.25;
-                                    return [Math.floor(dataMin - pad), Math.ceil(dataMax + pad)];
+                                    const pad = range * 0.2;
+                                    return [Math.max(0, Math.floor(dataMin - pad)), Math.ceil(dataMax + pad)];
                                 }}
                             />
                             <Tooltip
