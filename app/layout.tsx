@@ -3,6 +3,7 @@ import { GeistSans } from 'geist/font/sans';
 import './globals.css';
 import { NotificationProvider } from '@/context/NotificationContext';
 import { WatchlistHitsProvider } from '@/context/WatchlistHitsContext';
+import { LanguageProvider } from '@/context/LanguageContext';
 
 export const metadata: Metadata = {
     title: 'Nexfolio',
@@ -17,11 +18,13 @@ export default function RootLayout({
     return (
         <html lang="en" className={GeistSans.variable}>
             <body className="font-sans">
-                <NotificationProvider>
-                    <WatchlistHitsProvider>
-                        {children}
-                    </WatchlistHitsProvider>
-                </NotificationProvider>
+                <LanguageProvider>
+                    <NotificationProvider>
+                        <WatchlistHitsProvider>
+                            {children}
+                        </WatchlistHitsProvider>
+                    </NotificationProvider>
+                </LanguageProvider>
             </body>
         </html>
     );
