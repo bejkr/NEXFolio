@@ -18,6 +18,7 @@ export interface RiskMetrics {
 
 export interface MarketSnapshotData {
     sealedIndex12M: number;
+    gradedIndex12M?: number;
     marketLiquidityTrend: 'Increasing' | 'Stable' | 'Decreasing';
 }
 
