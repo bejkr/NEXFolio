@@ -18,7 +18,6 @@ export interface RiskMetrics {
 
 export interface MarketSnapshotData {
     sealedIndex12M: number;
-    gradedIndex12M: number;
     marketLiquidityTrend: 'Increasing' | 'Stable' | 'Decreasing';
 }
 
@@ -40,7 +39,7 @@ export interface VolatilityData {
 export interface TopMover {
     id: string;
     name: string;
-    category: 'Sealed' | 'Graded' | 'Raw';
+    category: string;
     currentValue: number;
     change30D: number | null;
     change12M: number | null;
@@ -69,7 +68,6 @@ export const mockRiskMetrics: RiskMetrics = {
 
 export const mockMarketSnapshot: MarketSnapshotData = {
     sealedIndex12M: 0,
-    gradedIndex12M: 0,
     marketLiquidityTrend: 'Stable',
 };
 
@@ -84,7 +82,7 @@ export interface CollectionItem {
     userId: string;
     name: string;
     set: string;
-    category: 'Sealed' | 'Graded' | 'Raw';
+    category: string;
     condition: string;
     costBasis: number;
     currentValue: number;
@@ -99,16 +97,15 @@ export const mockCollectionData: CollectionItem[] = [];
 
 export interface MarketOverviewData {
     sealedAvgPrice?: number;   // avg current price across all tracked products (optional)
-    sealedIndex12M: number;    // avg 12M price change % for sealed products
-    gradedIndex12M?: number;   // avg 12M price change % for graded products (optional)
-    averageLiquidity: number;  // avg listings count (normalized 0-100)
+    sealedIndex12M: number;
+    sealedIndex30D?: number;
+    averageLiquidity: number;
     marketVolatility: number;  // daily volatility %
 }
 
 export const mockMarketOverview: MarketOverviewData = {
     sealedAvgPrice: 0,
     sealedIndex12M: 0,
-    gradedIndex12M: 0,
     averageLiquidity: 0,
     marketVolatility: 0,
 };
@@ -125,7 +122,7 @@ export const mockEraPerformance: EraPerformance[] = [];
 export interface MarketAsset {
     id: string;
     name: string;
-    category: 'Sealed' | 'Graded' | 'Raw';
+    category: string;
     change30D: number | null;
     change12M: number | null;
     liquidityScore: number;
@@ -133,6 +130,20 @@ export interface MarketAsset {
     price?: number | null;
     sold7D?: number;          // optional — not available from Cardmarket scrape
     sellThroughRate?: number; // optional — not available from Cardmarket scrape
+}
+
+export interface DiscoverAsset {
+    id: string;
+    name: string;
+    category: string;
+    price: number | null;
+    momentum30D: number | null;
+    momentum12M: number | null;
+    liquidityScore: number;
+    activeListings: number;
+    nexfolioScore: number;
+    discoverScore: number;
+    imageUrl?: string | null;
 }
 
 export const mockMarketGainers: MarketAsset[] = [];
@@ -149,10 +160,30 @@ export interface MarketTrendData {
 
 export const mockMarketTrend: MarketTrendData[] = [];
 
+export interface PriceBreakout {
+    id: string;
+    name: string;
+    category: string;
+    price: number | null;
+    change7D: number;
+    change30D: number | null;
+    activeListings: number;
+    imageUrl?: string | null;
+}
+
+export interface TrendingSet {
+    expansion: string;
+    releaseYear?: number;
+    productCount: number;
+    avgChange30D: number;
+    avgChange12M: number | null;
+    avgPrice: number | null;
+}
+
 export interface ProductResearch {
     id: string;
     name: string;
-    category: 'Sealed' | 'Graded' | 'Raw';
+    category: string;
     era: string;
     price: number;
     change30D: number;
