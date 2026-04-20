@@ -97,11 +97,12 @@ export interface CollectionItem {
 export const mockCollectionData: CollectionItem[] = [];
 
 export interface MarketOverviewData {
-    sealedAvgPrice?: number;   // avg current price across all tracked products (optional)
+    sealedAvgPrice?: number;
     sealedIndex12M: number;
+    gradedIndex12M?: number;
     sealedIndex30D?: number;
     averageLiquidity: number;
-    marketVolatility: number;  // daily volatility %
+    marketVolatility: number;
 }
 
 export const mockMarketOverview: MarketOverviewData = {
