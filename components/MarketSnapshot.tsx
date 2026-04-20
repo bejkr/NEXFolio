@@ -17,12 +17,6 @@ export function MarketSnapshot({ data }: MarketSnapshotProps) {
                             {data.sealedIndex12M >= 0 ? '+' : ''}{data.sealedIndex12M}% 12M
                         </span>
                     </div>
-                    <div className="flex items-center space-x-2 text-gray-400">
-                        <span className="font-medium text-gray-500 uppercase tracking-wider">Graded Index:</span>
-                        <span className={data.gradedIndex12M >= 0 ? 'text-success-text' : 'text-danger-text'}>
-                            {data.gradedIndex12M >= 0 ? '+' : ''}{data.gradedIndex12M}% 12M
-                        </span>
-                    </div>
                 </div>
                 <div className="flex items-center text-gray-400">
                     <Activity className="h-4 w-4 mr-2" />
