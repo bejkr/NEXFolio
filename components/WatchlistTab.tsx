@@ -37,8 +37,9 @@ export function WatchlistTab() {
 
     useEffect(() => {
         fetch('/api/watchlist')
-            .then(r => r.json())
+            .then(r => r.ok ? r.json() : Promise.reject(new Error(`${r.status}`)))
             .then(data => { if (Array.isArray(data)) setItems(data); })
+            .catch(() => {})
             .finally(() => setLoading(false));
     }, []);
 

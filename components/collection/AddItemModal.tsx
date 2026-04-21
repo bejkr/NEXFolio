@@ -80,6 +80,7 @@ export function AddItemModal({ isOpen, onClose, onAdd, initialProduct }: Props) 
                 setIsSearching(true);
                 try {
                     const res = await fetch(`/api/products?q=${encodeURIComponent(formData.name)}`);
+                    if (!res.ok) throw new Error(`${res.status}`);
                     const data = await res.json();
                     setSuggestions(data.products || []);
                 } catch (error) {

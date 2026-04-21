@@ -27,6 +27,7 @@ export default function CollectionPage() {
     const [sortBy, setSortBy] = useState<SortOption>('date_desc');
     const [items, setItems] = useState<CollectionItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [fetchError, setFetchError] = useState(false);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
     // Pagination
@@ -43,9 +44,12 @@ export default function CollectionPage() {
                         ...item,
                         currentValue: item.product?.price ?? item.currentValue,
                     })));
+                } else {
+                    setFetchError(true);
                 }
             } catch (error) {
                 console.error('Error fetching collection:', error);
+                setFetchError(true);
             } finally {
                 setIsLoading(false);
             }
@@ -198,6 +202,10 @@ export default function CollectionPage() {
                         <div className="flex flex-col items-center justify-center h-64 text-gray-400">
                             <Loader2 className="w-8 h-8 animate-spin mb-4 text-primary" />
                             <p>Loading your collection...</p>
+                        </div>
+                    ) : fetchError ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                            <p className="text-red-400 text-sm">Failed to load collection. Please refresh the page.</p>
                         </div>
                     ) : viewMode === 'list' ? (
                         <CollectionTable data={paginatedData} onDelete={handleDeleteItem} />
