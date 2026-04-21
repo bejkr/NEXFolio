@@ -4,19 +4,19 @@ import { PriceEngine } from '../services/priceEngine';
 import { logger } from '../utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
+import puppeteer from 'puppeteer-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 
-/**
- * Cardmarket Price Sync — axios + cookies (no Puppeteer)
- *
- * Requires cookies from Brave browser in .cardmarket-cookies.txt or CM_COOKIES env var.
- * Uses fetchProductDetails which internally calls fetchHtmlWithCookies.
- */
+puppeteer.use(StealthPlugin());
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const DELAY_MS = 3000; // 3s between requests — safe for CF
 const PRICE_CHANGE_THRESHOLD = 0.005; // 0.5%
 const CHECKPOINT_FILE = path.join(process.cwd(), '.cache', 'sync-checkpoint.json');
 const REPORT_DIR = path.join(process.cwd(), '.cache', 'reports');
+const COOKIES_FILE = path.join(process.cwd(), '.cardmarket-cookies.txt');
+const UA_FILE = path.join(process.cwd(), '.cardmarket-ua.txt');
+const COOKIE_MAX_AGE_MS = 12 * 60 * 60 * 1000; // refresh if older than 12h
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ProductReport {
@@ -78,6 +78,62 @@ function buildProductUrl(product: any): string | null {
     return `https://www.cardmarket.com/en/Pokemon/Products/${cat}/${product.externalId}`;
 }
 
+// ─── Cookie refresh ───────────────────────────────────────────────────────────
+async function refreshCookies(): Promise<boolean> {
+    const BRAVE_PATH = 'C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe';
+    const BRAVE_USER_DATA = `C:\\Users\\${require('os').userInfo().username}\\AppData\\Local\\BraveSoftware\\Brave-Browser\\User Data`;
+    const executablePath = fs.existsSync(BRAVE_PATH) ? BRAVE_PATH : undefined;
+    const userDataDir = executablePath && fs.existsSync(BRAVE_USER_DATA) ? BRAVE_USER_DATA : undefined;
+
+    let browser: any = null;
+    try {
+        browser = await (puppeteer as any).launch({
+            headless: false,
+            executablePath,
+            userDataDir,
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1280,800'],
+        });
+        const page = await browser.newPage();
+        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36');
+        await page.goto('https://www.cardmarket.com/en/Pokemon', { waitUntil: 'domcontentloaded', timeout: 90000 });
+
+        if ((await page.title()).includes('Just a moment')) {
+            await page.waitForFunction(() => !document.title.includes('Just a moment'), { timeout: 60000 });
+            await new Promise(r => setTimeout(r, 2000));
+        }
+
+        const cookies = await page.cookies();
+        const cookieString = cookies.map((c: any) => `${c.name}=${c.value}`).join('; ');
+        const realUA = await page.evaluate(() => navigator.userAgent);
+
+        fs.writeFileSync(COOKIES_FILE, cookieString);
+        fs.writeFileSync(UA_FILE, realUA);
+
+        const hasCF = cookies.some((c: any) => c.name === 'cf_clearance');
+        logger.info(`Cookies refreshed — cf_clearance: ${hasCF ? '✓' : '✗'}, total: ${cookies.length}`);
+        return true;
+    } catch (e: any) {
+        logger.warn(`Cookie refresh failed: ${e.message}`);
+        return false;
+    } finally {
+        if (browser) await browser.close().catch(() => {});
+    }
+}
+
+async function ensureFreshCookies(): Promise<void> {
+    const isStale = !fs.existsSync(COOKIES_FILE) ||
+        (Date.now() - fs.statSync(COOKIES_FILE).mtimeMs) > COOKIE_MAX_AGE_MS;
+
+    if (!isStale) {
+        const ageMin = Math.round((Date.now() - fs.statSync(COOKIES_FILE).mtimeMs) / 60000);
+        logger.info(`Cookies are fresh (${ageMin}m old) — skipping refresh`);
+        return;
+    }
+
+    logger.info('Cookies stale or missing — refreshing via Brave...');
+    await refreshCookies();
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
     logger.info('╔══════════════════════════════════════════════════╗');
@@ -86,9 +142,12 @@ async function main() {
 
     const force = process.argv.includes('--force');
     const resume = process.argv.includes('--resume');
+    const skipCookieRefresh = process.argv.includes('--no-cookie-refresh');
 
     if (force) logger.info('Force sync enabled.');
     if (resume) logger.info('Resume mode enabled.');
+
+    if (!skipCookieRefresh) await ensureFreshCookies();
 
     const checkpoint = resume ? loadCheckpoint() : null;
     const alreadyProcessed = new Set(checkpoint?.processedIds ?? []);

@@ -88,36 +88,36 @@ function releasePage(index: number): void {
     if (next) next();
 }
 
-function hasPriceData(html: string): boolean {
-    return html.includes('info-list-container') || html.includes('Trend Price') || html.includes('Price Trend');
-}
+// Flaresolverr persistent session — solve CF once, reuse cookies for all requests
+let _flaresSession: string | null = null;
+let _flaresSessionAt: number = 0;
+const FLARES_SESSION_TTL_MS = 25 * 60 * 1000; // 25 min (cf_clearance ~30 min)
 
-async function fetchNativeHtml(url: string, cookieString: string, userAgent: string): Promise<string> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
-    try {
-        const response = await fetch(url, {
-            signal: controller.signal,
-            headers: {
-                'User-Agent': userAgent,
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Cookie': cookieString,
-                'Referer': 'https://www.cardmarket.com/en/Pokemon',
-            },
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        return await response.text();
-    } finally {
-        clearTimeout(timeout);
+async function getFlaresSession(flaresURL: string): Promise<string | null> {
+    const age = Date.now() - _flaresSessionAt;
+    if (_flaresSession && age < FLARES_SESSION_TTL_MS) return _flaresSession;
+
+    // Destroy stale session
+    if (_flaresSession) {
+        try { await axios.post(`${flaresURL}/v1`, { cmd: 'sessions.destroy', session: _flaresSession }, { timeout: 5000 }); } catch {}
+        _flaresSession = null;
     }
+
+    try {
+        const res = await axios.post(`${flaresURL}/v1`, { cmd: 'sessions.create' }, { timeout: 10000 });
+        _flaresSession = res.data?.session ?? null;
+        _flaresSessionAt = Date.now();
+        if (_flaresSession) logger.info(`[Flaresolverr] Session created: ${_flaresSession}`);
+    } catch (e: any) {
+        logger.warn(`[Flaresolverr] Session create failed: ${e.message}`);
+    }
+    return _flaresSession;
 }
 
 /**
- * Fetch HTML with 3-tier fallback to minimise ScrapingBee credit usage:
- *   Tier 1 — native fetch with cookies      (0 credits)
- *   Tier 2 — ScrapingBee, no render_js      (1 credit)
- *   Tier 3 — ScrapingBee, render_js         (5 credits)  ← last resort
+ * Fetch HTML with 2-tier fallback:
+ *   Tier 1 — Flaresolverr session (solve CF once, reuse cookies for all 500+ requests)
+ *   Tier 2 — ScrapingBee render_js + premium_proxy (fallback if Flaresolverr unavailable)
  */
 async function fetchHtmlWithCookies(url: string, cacheTTLMs: number = 0): Promise<string> {
     // Check cache first
@@ -135,69 +135,44 @@ async function fetchHtmlWithCookies(url: string, cacheTTLMs: number = 0): Promis
         fs.unlinkSync(cacheFile);
     }
 
-    // Load cookies from file or env
-    let cookieString = process.env.CM_COOKIES || '';
-    if (!cookieString && fs.existsSync(COOKIES_FILE)) {
-        cookieString = fs.readFileSync(COOKIES_FILE, 'utf-8').trim();
-    }
-    if (!cookieString) {
-        throw new Error('No Cardmarket cookies found. Run: npm run sync:cardmarket:cookies');
-    }
-
-    // Load User-Agent — must match the browser that generated the cookies
-    const UA_FILE = path.join(process.cwd(), '.cardmarket-ua.txt');
-    const userAgent = fs.existsSync(UA_FILE)
-        ? fs.readFileSync(UA_FILE, 'utf-8').trim()
-        : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36';
-
     const scrapingBeeKey = process.env.SCRAPINGBEE_KEY;
+    const flaresURL = process.env.FLARESOLVERR_URL || 'http://localhost:8191';
     let html: string | null = null;
 
-    // Tier 1: native fetch with cookies — 0 ScrapingBee credits
+    // Tier 1: Flaresolverr with persistent session
+    // First request solves CF challenge (~11s), subsequent requests reuse cf_clearance cookie (fast)
     try {
-        logger.info(`[Tier 1] Native fetch: ${url}`);
-        const result = await fetchNativeHtml(url, cookieString, userAgent);
-        if (!result.includes('Just a moment...')) {
+        const session = await getFlaresSession(flaresURL);
+        logger.info(`[Tier 1] Flaresolverr${session ? ` (session ${session})` : ''}: ${url}`);
+        const response = await axios.post(`${flaresURL}/v1`, {
+            cmd: 'request.get',
+            url,
+            maxTimeout: 60000,
+            ...(session ? { session } : {}),
+        }, { timeout: 75000 });
+
+        const result: string = response.data?.solution?.response ?? '';
+        if (response.data?.solution?.status === 200 && result && !result.includes('Just a moment...')) {
             html = result;
         } else {
-            logger.warn(`[Tier 1] Cloudflare challenge — escalating`);
+            logger.warn(`[Tier 1] Flaresolverr status ${response.data?.solution?.status} — escalating`);
+            // Invalidate session so next call creates a fresh one
+            _flaresSession = null;
         }
     } catch (e: any) {
-        logger.warn(`[Tier 1] Failed: ${e.message} — escalating`);
+        logger.warn(`[Tier 1] Flaresolverr failed: ${e.message} — escalating`);
+        _flaresSession = null;
     }
 
-    // Tier 2: ScrapingBee without render_js — 1 credit
+    // Tier 2: ScrapingBee — fallback if Flaresolverr is down or blocked
     if (!html && scrapingBeeKey) {
-        try {
-            logger.info(`[Tier 2] ScrapingBee (no render_js, ~1 credit): ${url}`);
-            const response = await axios.get('https://app.scrapingbee.com/api/v1', {
-                params: {
-                    api_key: scrapingBeeKey,
-                    url,
-                    render_js: 'false',
-                    country_code: 'de',
-                },
-                timeout: 30000,
-            });
-            const result = response.data as string;
-            if (!result.includes('Just a moment...') && hasPriceData(result)) {
-                html = result;
-            } else {
-                logger.warn(`[Tier 2] CF challenge or no price data — escalating`);
-            }
-        } catch (e: any) {
-            logger.warn(`[Tier 2] Failed: ${e.message} — escalating`);
-        }
-    }
-
-    // Tier 3: ScrapingBee with render_js — 5 credits, last resort
-    if (!html && scrapingBeeKey) {
-        logger.info(`[Tier 3] ScrapingBee (render_js, ~5 credits): ${url}`);
+        logger.info(`[Tier 2] ScrapingBee (render_js + premium_proxy): ${url}`);
         const response = await axios.get('https://app.scrapingbee.com/api/v1', {
             params: {
                 api_key: scrapingBeeKey,
                 url,
                 render_js: 'true',
+                premium_proxy: 'true',
                 country_code: 'de',
             },
             timeout: 60000,
@@ -206,11 +181,11 @@ async function fetchHtmlWithCookies(url: string, cacheTTLMs: number = 0): Promis
     }
 
     if (!html) {
-        throw new Error('All fetch tiers failed — no ScrapingBee key and native fetch blocked. Refresh cookies: npm run sync:cardmarket:cookies');
+        throw new Error('All fetch tiers failed — start Flaresolverr: docker start flaresolverr');
     }
 
     if (html.includes('Just a moment...')) {
-        throw new Error('Cloudflare challenge detected — cookies may be expired. Refresh them from Brave.');
+        throw new Error('Cloudflare challenge not solved — check Flaresolverr logs.');
     }
 
     // Cache result
