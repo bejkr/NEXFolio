@@ -86,9 +86,13 @@ async function generateAiSignals(portfolioSummary: string): Promise<PortfolioSig
     });
 
     const text = message.content[0].type === 'text' ? message.content[0].text : '[]';
-    const parsed = JSON.parse(text);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as PortfolioSignal[];
+    try {
+        const parsed = JSON.parse(text);
+        if (!Array.isArray(parsed)) return [];
+        return parsed as PortfolioSignal[];
+    } catch {
+        return [];
+    }
 }
 
 export async function GET() {

@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
     const expansion = searchParams.get('expansion') || '';
     const releaseYearStr = searchParams.get('year');
     const sortStr = searchParams.get('sort') || 'name_asc';
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const pageRaw = parseInt(searchParams.get('page') || '1', 10);
+    const page = Math.max(1, isNaN(pageRaw) ? 1 : pageRaw);
 
     try {
         const where: Prisma.ProductWhereInput = {};
